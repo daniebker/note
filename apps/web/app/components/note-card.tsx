@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { ColorPicker } from "./color-picker";
 import { NoteMarkdown } from "./note-markdown";
-import { PaletteIcon, PinIcon, TrashIcon } from "./icons";
+import { downloadNoteAsMarkdown } from "./note-download";
+import { MoreIcon, PaletteIcon, PinIcon, TrashIcon } from "./icons";
 import { colorValue, type NoteData } from "./note-types";
 
 export function NoteCard({
   note,
+  authorEmail,
   onOpen,
   onTogglePin,
   onColorChange,
@@ -15,6 +17,7 @@ export function NoteCard({
   onTagClick,
 }: {
   note: NoteData;
+  authorEmail: string;
   onOpen: () => void;
   onTogglePin: () => void;
   onColorChange: (color: string) => void;
@@ -23,6 +26,8 @@ export function NoteCard({
 }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const paletteRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!paletteOpen) return;
@@ -34,6 +39,17 @@ export function NoteCard({
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [paletteOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onClickOutside(e: MouseEvent) {
+      if (!menuRef.current?.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [menuOpen]);
 
   const isColored = note.color !== "default";
 
@@ -99,6 +115,31 @@ export function NoteCard({
         >
           <TrashIcon className="h-4.5 w-4.5" />
         </button>
+        <div className="relative ml-auto" ref={menuRef}>
+          <button
+            aria-label="More options"
+            className="rounded-full p-1.5 text-ink-muted hover:bg-ink/10"
+            onClick={() => setMenuOpen((o) => !o)}
+            title="More options"
+            type="button"
+          >
+            <MoreIcon className="h-4.5 w-4.5" />
+          </button>
+          {menuOpen && (
+            <div className="absolute bottom-full right-0 z-20 mb-1 w-max min-w-[10rem] rounded-lg border border-edge bg-surface py-1 shadow-lg">
+              <button
+                className="block w-full whitespace-nowrap px-3 py-1.5 text-left text-sm text-ink hover:bg-ink/10"
+                onClick={() => {
+                  downloadNoteAsMarkdown(note, authorEmail);
+                  setMenuOpen(false);
+                }}
+                type="button"
+              >
+                Download as Markdown
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -23,9 +23,11 @@ async function api(path: string, init?: RequestInit) {
 export function NotesApp({
   initialNotes,
   userName,
+  userEmail,
 }: {
   initialNotes: NoteData[];
   userName: string;
+  userEmail: string;
 }) {
   const router = useRouter();
   const [notes, setNotes] = useState<NoteData[]>(initialNotes);
@@ -110,6 +112,7 @@ export function NotesApp({
         {list.map((note) => (
           <NoteCard
             key={note.id}
+            authorEmail={userEmail}
             note={note}
             onColorChange={(color) => updateNote(note.id, { color })}
             onDelete={() => deleteNote(note.id)}

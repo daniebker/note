@@ -20,9 +20,11 @@ export default async function Page() {
         content: n.content,
         color: n.color,
         pinned: n.pinned,
+        createdAt: n.createdAt.toISOString(),
         updatedAt: n.updatedAt.toISOString(),
       }))}
       userName={session.name}
+      userEmail={session.email}
     />
   );
 }
