@@ -77,6 +77,20 @@ body {
   color: var(--ink);
 }
 
+/* Inline #tags in rendered markdown */
+.note-tag {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+button.note-tag {
+  cursor: pointer;
+}
+
+button.note-tag:hover {
+  text-decoration: underline;
+}
+
 /* Rendered markdown inside note cards */
 .note-markdown {
   font-size: 0.875rem;

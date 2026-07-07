@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { ColorPicker } from "./color-picker";
+import { NoteMarkdown } from "./note-markdown";
 import { PaletteIcon, TrashIcon } from "./icons";
 import { colorValue, type NoteData } from "./note-types";
 
@@ -66,9 +65,7 @@ export function EditModal({
           />
           {showPreview ? (
             <div className="note-markdown mt-3 text-ink">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {content}
-              </ReactMarkdown>
+              <NoteMarkdown content={content} />
             </div>
           ) : (
             <textarea

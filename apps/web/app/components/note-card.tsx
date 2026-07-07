@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { ColorPicker } from "./color-picker";
+import { NoteMarkdown } from "./note-markdown";
 import { PaletteIcon, PinIcon, TrashIcon } from "./icons";
 import { colorValue, type NoteData } from "./note-types";
 
@@ -13,12 +12,14 @@ export function NoteCard({
   onTogglePin,
   onColorChange,
   onDelete,
+  onTagClick,
 }: {
   note: NoteData;
   onOpen: () => void;
   onTogglePin: () => void;
   onColorChange: (color: string) => void;
   onDelete: () => void;
+  onTagClick: (tag: string) => void;
 }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const paletteRef = useRef<HTMLDivElement>(null);
@@ -62,9 +63,7 @@ export function NoteCard({
           </h3>
         )}
         <div className="note-markdown max-h-[26rem] overflow-hidden text-ink">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {note.content}
-          </ReactMarkdown>
+          <NoteMarkdown content={note.content} onTagClick={onTagClick} />
         </div>
       </div>
 

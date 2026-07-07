@@ -8,6 +8,7 @@ import { PenIcon } from "./auth-form";
 import { NoteCard } from "./note-card";
 import { SearchIcon } from "./icons";
 import { ThemeToggle } from "./theme-toggle";
+import { extractTags } from "./tags";
 import type { NoteData } from "./note-types";
 
 async function api(path: string, init?: RequestInit) {
@@ -36,11 +37,35 @@ export function NotesApp({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return notes;
+    // "#foo" searches by tag; anything else is a plain text search.
+    if (q.startsWith("#") && q.length > 1) {
+      const tag = q.slice(1);
+      return notes.filter((n) =>
+        extractTags(n.title, n.content).some((t) =>
+          t.toLowerCase().startsWith(tag),
+        ),
+      );
+    }
     return notes.filter(
       (n) =>
         n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q),
     );
   }, [notes, query]);
+
+  const allTags = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const n of notes) {
+      for (const t of extractTags(n.title, n.content)) {
+        const key = t.toLowerCase();
+        if (!seen.has(key)) seen.set(key, t);
+      }
+    }
+    return [...seen.values()].sort((a, b) => a.localeCompare(b));
+  }, [notes]);
+
+  const activeTag = query.trim().toLowerCase().startsWith("#")
+    ? query.trim().slice(1).toLowerCase()
+    : null;
 
   const pinned = filtered.filter((n) => n.pinned);
   const others = filtered.filter((n) => !n.pinned);
@@ -89,6 +114,7 @@ export function NotesApp({
             onColorChange={(color) => updateNote(note.id, { color })}
             onDelete={() => deleteNote(note.id)}
             onOpen={() => setEditingId(note.id)}
+            onTagClick={(tag) => setQuery(`#${tag}`)}
             onTogglePin={() => updateNote(note.id, { pinned: !note.pinned })}
           />
         ))}
@@ -129,6 +155,28 @@ export function NotesApp({
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <Composer onCreate={createNote} />
+
+        {allTags.length > 0 && (
+          <div className="mb-6 flex flex-wrap justify-center gap-2">
+            {allTags.map((tag) => {
+              const active = activeTag === tag.toLowerCase();
+              return (
+                <button
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    active
+                      ? "border-accent bg-accent/15 text-accent"
+                      : "border-edge text-ink-muted hover:bg-ink/10"
+                  }`}
+                  key={tag}
+                  onClick={() => setQuery(active ? "" : `#${tag}`)}
+                  type="button"
+                >
+                  #{tag}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {filtered.length === 0 ? (
           <p className="mt-16 text-center text-sm text-ink-muted">
