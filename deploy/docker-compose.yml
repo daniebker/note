@@ -1,0 +1,28 @@
+# Runs on the VPS. The deploy workflow copies this file plus a .env
+# (WEB_IMAGE, SESSION_SECRET, TURNSTILE_SECRET_KEY) to ~/apps/note/.
+services:
+  web:
+    image: ${WEB_IMAGE:?set WEB_IMAGE in .env, e.g. ghcr.io/<owner>/<repo>/web:latest}
+    restart: unless-stopped
+    ports:
+      # Plain HTTP on ${WEB_PORT}; put a reverse proxy (Caddy/nginx) in front for TLS.
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: "file:/app/data/note.db"
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:?set TURNSTILE_SECRET_KEY in .env}
+    volumes:
+      - note-data:/app/data
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://localhost:3000/login').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  note-data:

@@ -1,0 +1,168 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Composer } from "./composer";
+import { EditModal } from "./edit-modal";
+import { PenIcon } from "./auth-form";
+import { NoteCard } from "./note-card";
+import { SearchIcon } from "./icons";
+import type { NoteData } from "./note-types";
+
+async function api(path: string, init?: RequestInit) {
+  const res = await fetch(path, {
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  });
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  return res.json();
+}
+
+export function NotesApp({
+  initialNotes,
+  userName,
+}: {
+  initialNotes: NoteData[];
+  userName: string;
+}) {
+  const router = useRouter();
+  const [notes, setNotes] = useState<NoteData[]>(initialNotes);
+  const [query, setQuery] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const editingNote = notes.find((n) => n.id === editingId) ?? null;
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return notes;
+    return notes.filter(
+      (n) =>
+        n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q),
+    );
+  }, [notes, query]);
+
+  const pinned = filtered.filter((n) => n.pinned);
+  const others = filtered.filter((n) => !n.pinned);
+
+  async function createNote(data: {
+    title: string;
+    content: string;
+    color: string;
+  }) {
+    const { note } = (await api("/api/notes", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })) as { note: NoteData };
+    setNotes((prev) => [note, ...prev]);
+  }
+
+  async function updateNote(id: string, changes: Partial<NoteData>) {
+    setNotes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, ...changes } : n)),
+    );
+    await api(`/api/notes/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(changes),
+    });
+  }
+
+  async function deleteNote(id: string) {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+    if (editingId === id) setEditingId(null);
+    await api(`/api/notes/${id}`, { method: "DELETE" });
+  }
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
+
+  function grid(list: NoteData[]) {
+    return (
+      <div className="columns-1 gap-3 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5">
+        {list.map((note) => (
+          <NoteCard
+            key={note.id}
+            note={note}
+            onColorChange={(color) => updateNote(note.id, { color })}
+            onDelete={() => deleteNote(note.id)}
+            onOpen={() => setEditingId(note.id)}
+            onTogglePin={() => updateNote(note.id, { pinned: !note.pinned })}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white">
+      <header className="sticky top-0 z-30 flex items-center gap-4 border-b border-[#e0e0e0] bg-white px-4 py-2 sm:px-6">
+        <div className="flex items-center gap-2">
+          <PenIcon className="h-8 w-8" />
+          <span className="text-xl text-[#5f6368]">Note</span>
+        </div>
+        <div className="mx-auto flex w-full max-w-2xl items-center gap-3 rounded-lg bg-[#f1f3f4] px-4 py-2.5 focus-within:bg-white focus-within:shadow-md">
+          <SearchIcon className="h-5 w-5 text-[#5f6368]" />
+          <input
+            className="w-full bg-transparent text-sm text-[#202124] placeholder-[#5f6368] outline-none"
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search"
+            value={query}
+          />
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="hidden text-sm text-[#5f6368] sm:inline">
+            {userName}
+          </span>
+          <button
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-[#1a73e8] hover:bg-[#1a73e8]/10"
+            onClick={logout}
+            type="button"
+          >
+            Sign out
+          </button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <Composer onCreate={createNote} />
+
+        {filtered.length === 0 ? (
+          <p className="mt-16 text-center text-sm text-[#5f6368]">
+            {notes.length === 0
+              ? "Notes you add appear here"
+              : "No matching notes"}
+          </p>
+        ) : pinned.length > 0 ? (
+          <>
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-[#5f6368]">
+              Pinned
+            </h2>
+            {grid(pinned)}
+            {others.length > 0 && (
+              <>
+                <h2 className="mb-3 mt-6 text-xs font-medium uppercase tracking-wide text-[#5f6368]">
+                  Others
+                </h2>
+                {grid(others)}
+              </>
+            )}
+          </>
+        ) : (
+          grid(others)
+        )}
+      </main>
+
+      {editingNote && (
+        <EditModal
+          key={editingNote.id}
+          note={editingNote}
+          onClose={() => setEditingId(null)}
+          onDelete={() => deleteNote(editingNote.id)}
+          onSave={(changes) => updateNote(editingNote.id, changes)}
+        />
+      )}
+    </div>
+  );
+}
