@@ -66,6 +66,7 @@ jobs:
             Port ${{ secrets.VPS_PORT }}
             User ${{ secrets.VPS_USER }}
             IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
           CONF
 
       - name: Copy compose file
