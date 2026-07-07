@@ -55,21 +55,21 @@ export function Composer({
 
   return (
     <div
-      className="mx-auto mb-8 w-full max-w-xl rounded-lg border border-[#e0e0e0] shadow-md"
+      className="mx-auto mb-8 w-full max-w-xl rounded-lg border border-edge shadow-md"
       ref={containerRef}
       style={{ backgroundColor: colorValue(color) }}
     >
       {expanded ? (
         <div className="p-3">
           <input
-            className="w-full bg-transparent text-base font-medium text-[#202124] placeholder-[#5f6368] outline-none"
+            className="w-full bg-transparent text-base font-medium text-ink placeholder-ink-muted outline-none"
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Title"
             value={title}
           />
           <textarea
             autoFocus
-            className="mt-2 w-full resize-none bg-transparent text-sm text-[#202124] placeholder-[#5f6368] outline-none"
+            className="mt-2 w-full resize-none bg-transparent text-sm text-ink placeholder-ink-muted outline-none"
             onChange={(e) => setContent(e.target.value)}
             placeholder="Take a note… (markdown supported)"
             ref={contentRef}
@@ -80,7 +80,7 @@ export function Composer({
             <div className="relative">
               <button
                 aria-label="Change color"
-                className="rounded-full p-1.5 text-[#5f6368] hover:bg-black/10"
+                className="rounded-full p-1.5 text-ink-muted hover:bg-ink/10"
                 onClick={() => setPaletteOpen((o) => !o)}
                 title="Background options"
                 type="button"
@@ -100,7 +100,7 @@ export function Composer({
               )}
             </div>
             <button
-              className="rounded px-5 py-1.5 text-sm font-medium text-[#202124] hover:bg-black/10"
+              className="rounded px-5 py-1.5 text-sm font-medium text-ink hover:bg-ink/10"
               onClick={save}
               type="button"
             >
@@ -110,7 +110,7 @@ export function Composer({
         </div>
       ) : (
         <button
-          className="w-full cursor-text px-4 py-3 text-left text-sm font-medium text-[#5f6368]"
+          className="w-full cursor-text px-4 py-3 text-left text-sm font-medium text-ink-muted"
           onClick={() => setExpanded(true)}
           type="button"
         >

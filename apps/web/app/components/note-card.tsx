@@ -39,13 +39,13 @@ export function NoteCard({
   return (
     <div
       className={`group relative mb-3 break-inside-avoid rounded-lg border p-4 transition-shadow hover:shadow-md ${
-        isColored ? "border-transparent" : "border-[#e0e0e0]"
+        isColored ? "border-transparent" : "border-edge"
       }`}
       style={{ backgroundColor: colorValue(note.color) }}
     >
       <button
         aria-label={note.pinned ? "Unpin note" : "Pin note"}
-        className={`absolute right-2 top-2 rounded-full p-1.5 text-[#5f6368] transition-opacity hover:bg-black/10 ${
+        className={`absolute right-2 top-2 rounded-full p-1.5 text-ink-muted transition-opacity hover:bg-ink/10 ${
           note.pinned ? "" : "opacity-0 group-hover:opacity-100"
         }`}
         onClick={onTogglePin}
@@ -57,11 +57,11 @@ export function NoteCard({
 
       <div className="cursor-pointer" onClick={onOpen}>
         {note.title && (
-          <h3 className="mb-2 pr-7 text-sm font-semibold text-[#202124]">
+          <h3 className="mb-2 pr-7 text-sm font-semibold text-ink">
             {note.title}
           </h3>
         )}
-        <div className="note-markdown max-h-[26rem] overflow-hidden text-[#202124]">
+        <div className="note-markdown max-h-[26rem] overflow-hidden text-ink">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {note.content}
           </ReactMarkdown>
@@ -72,7 +72,7 @@ export function NoteCard({
         <div className="relative" ref={paletteRef}>
           <button
             aria-label="Change color"
-            className="rounded-full p-1.5 text-[#5f6368] hover:bg-black/10"
+            className="rounded-full p-1.5 text-ink-muted hover:bg-ink/10"
             onClick={() => setPaletteOpen((o) => !o)}
             title="Background options"
             type="button"
@@ -93,7 +93,7 @@ export function NoteCard({
         </div>
         <button
           aria-label="Delete note"
-          className="rounded-full p-1.5 text-[#5f6368] hover:bg-black/10"
+          className="rounded-full p-1.5 text-ink-muted hover:bg-ink/10"
           onClick={onDelete}
           title="Delete"
           type="button"

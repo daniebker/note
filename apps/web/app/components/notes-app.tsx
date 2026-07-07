@@ -7,6 +7,7 @@ import { EditModal } from "./edit-modal";
 import { PenIcon } from "./auth-form";
 import { NoteCard } from "./note-card";
 import { SearchIcon } from "./icons";
+import { ThemeToggle } from "./theme-toggle";
 import type { NoteData } from "./note-types";
 
 async function api(path: string, init?: RequestInit) {
@@ -96,27 +97,28 @@ export function NotesApp({
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="sticky top-0 z-30 flex items-center gap-4 border-b border-[#e0e0e0] bg-white px-4 py-2 sm:px-6">
+    <div className="min-h-screen bg-surface">
+      <header className="sticky top-0 z-30 flex items-center gap-4 border-b border-edge bg-surface px-4 py-2 sm:px-6">
         <div className="flex items-center gap-2">
           <PenIcon className="h-8 w-8" />
-          <span className="text-xl text-[#5f6368]">Note</span>
+          <span className="text-xl text-ink-muted">Note</span>
         </div>
-        <div className="mx-auto flex w-full max-w-2xl items-center gap-3 rounded-lg bg-[#f1f3f4] px-4 py-2.5 focus-within:bg-white focus-within:shadow-md">
-          <SearchIcon className="h-5 w-5 text-[#5f6368]" />
+        <div className="mx-auto flex w-full max-w-2xl items-center gap-3 rounded-lg bg-field px-4 py-2.5 focus-within:bg-surface focus-within:shadow-md">
+          <SearchIcon className="h-5 w-5 text-ink-muted" />
           <input
-            className="w-full bg-transparent text-sm text-[#202124] placeholder-[#5f6368] outline-none"
+            className="w-full bg-transparent text-sm text-ink placeholder-ink-muted outline-none"
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search"
             value={query}
           />
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          <span className="hidden text-sm text-[#5f6368] sm:inline">
+          <span className="hidden text-sm text-ink-muted sm:inline">
             {userName}
           </span>
+          <ThemeToggle />
           <button
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-[#1a73e8] hover:bg-[#1a73e8]/10"
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
             onClick={logout}
             type="button"
           >
@@ -129,20 +131,20 @@ export function NotesApp({
         <Composer onCreate={createNote} />
 
         {filtered.length === 0 ? (
-          <p className="mt-16 text-center text-sm text-[#5f6368]">
+          <p className="mt-16 text-center text-sm text-ink-muted">
             {notes.length === 0
               ? "Notes you add appear here"
               : "No matching notes"}
           </p>
         ) : pinned.length > 0 ? (
           <>
-            <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-[#5f6368]">
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-muted">
               Pinned
             </h2>
             {grid(pinned)}
             {others.length > 0 && (
               <>
-                <h2 className="mb-3 mt-6 text-xs font-medium uppercase tracking-wide text-[#5f6368]">
+                <h2 className="mb-3 mt-6 text-xs font-medium uppercase tracking-wide text-ink-muted">
                   Others
                 </h2>
                 {grid(others)}

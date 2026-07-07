@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckIcon } from "./icons";
-import { NOTE_COLORS } from "./note-types";
+import { colorValue, NOTE_COLOR_NAMES } from "./note-types";
 
 export function ColorPicker({
   selected,
@@ -11,27 +11,27 @@ export function ColorPicker({
   onSelect: (name: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-1 rounded-lg border border-[#dadce0] bg-white p-2 shadow-lg">
-      {NOTE_COLORS.map((c) => (
+    <div className="flex flex-wrap gap-1 rounded-lg border border-edge bg-surface p-2 shadow-lg">
+      {NOTE_COLOR_NAMES.map((name) => (
         <button
-          aria-label={`Color ${c.name}`}
+          aria-label={`Color ${name}`}
           className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition-transform hover:scale-110 ${
-            selected === c.name
+            selected === name
               ? "border-[#a142f4]"
-              : c.name === "default"
-                ? "border-[#dadce0]"
+              : name === "default"
+                ? "border-edge"
                 : "border-transparent"
           }`}
-          key={c.name}
+          key={name}
           onClick={(e) => {
             e.stopPropagation();
-            onSelect(c.name);
+            onSelect(name);
           }}
-          style={{ backgroundColor: c.value }}
-          title={c.name}
+          style={{ backgroundColor: colorValue(name) }}
+          title={name}
           type="button"
         >
-          {selected === c.name && <CheckIcon className="h-4 w-4 text-[#a142f4]" />}
+          {selected === name && <CheckIcon className="h-4 w-4 text-[#a142f4]" />}
         </button>
       ))}
     </div>

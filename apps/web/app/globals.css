@@ -1,9 +1,80 @@
 @import "tailwindcss";
 @import "@repo/tailwind-config";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+
+  --surface: #ffffff;
+  --surface-dim: #f8f9fa;
+  --field: #f1f3f4;
+  --ink: #202124;
+  --ink-muted: #5f6368;
+  --edge: #e0e0e0;
+  --accent: #1a73e8;
+  --danger: #d93025;
+  --code-bg: rgba(0, 0, 0, 0.07);
+  --rule: rgba(0, 0, 0, 0.15);
+
+  /* Google Keep's light note palette */
+  --note-default: #ffffff;
+  --note-coral: #faafa8;
+  --note-peach: #f39f76;
+  --note-sand: #fff8b8;
+  --note-mint: #e2f6d3;
+  --note-sage: #b4ddd3;
+  --note-fog: #d4e4ed;
+  --note-storm: #aeccdc;
+  --note-dusk: #d3bfdb;
+  --note-blossom: #f6e2dd;
+  --note-clay: #e9e3d4;
+  --note-chalk: #efeff1;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --surface: #202124;
+  --surface-dim: #17181b;
+  --field: #303134;
+  --ink: #e8eaed;
+  --ink-muted: #9aa0a6;
+  --edge: #5f6368;
+  --accent: #8ab4f8;
+  --danger: #f28b82;
+  --code-bg: rgba(255, 255, 255, 0.1);
+  --rule: rgba(255, 255, 255, 0.2);
+
+  /* Google Keep's dark note palette */
+  --note-default: #202124;
+  --note-coral: #77172e;
+  --note-peach: #692b17;
+  --note-sand: #7c4a03;
+  --note-mint: #264d3b;
+  --note-sage: #0c625d;
+  --note-fog: #256377;
+  --note-storm: #284255;
+  --note-dusk: #472e5b;
+  --note-blossom: #6c394f;
+  --note-clay: #4b443a;
+  --note-chalk: #232427;
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-field: var(--field);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-edge: var(--edge);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+}
+
 body {
-  background: #ffffff;
-  color: #202124;
+  background: var(--surface);
+  color: var(--ink);
 }
 
 /* Rendered markdown inside note cards */
@@ -66,23 +137,23 @@ body {
 
 .note-markdown input[type="checkbox"] {
   margin-right: 0.4em;
-  accent-color: #5f6368;
+  accent-color: var(--ink-muted);
 }
 
 .note-markdown a {
-  color: #1a73e8;
+  color: var(--accent);
   text-decoration: underline;
 }
 
 .note-markdown code {
-  background: rgba(0, 0, 0, 0.07);
+  background: var(--code-bg);
   border-radius: 4px;
   padding: 0.1em 0.35em;
   font-size: 0.85em;
 }
 
 .note-markdown pre {
-  background: rgba(0, 0, 0, 0.07);
+  background: var(--code-bg);
   border-radius: 6px;
   padding: 0.6em 0.8em;
   overflow-x: auto;
@@ -94,9 +165,9 @@ body {
 }
 
 .note-markdown blockquote {
-  border-left: 3px solid rgba(0, 0, 0, 0.2);
+  border-left: 3px solid var(--rule);
   padding-left: 0.75em;
-  color: #5f6368;
+  color: var(--ink-muted);
 }
 
 .note-markdown img {
@@ -106,7 +177,7 @@ body {
 
 .note-markdown hr {
   border: none;
-  border-top: 1px solid rgba(0, 0, 0, 0.15);
+  border-top: 1px solid var(--rule);
 }
 
 .note-markdown table {
@@ -116,6 +187,6 @@ body {
 
 .note-markdown th,
 .note-markdown td {
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--rule);
   padding: 0.25em 0.5em;
 }

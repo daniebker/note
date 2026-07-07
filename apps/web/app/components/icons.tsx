@@ -39,6 +39,22 @@ export function SearchIcon({ className }: IconProps) {
   );
 }
 
+export function SunIcon({ className }: IconProps) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm-1-6h2v3h-2V1Zm0 19h2v3h-2v-3ZM3.5 4.9 4.9 3.5l2.1 2.1-1.4 1.4L3.5 4.9Zm13.5 13.5 1.4-1.4 2.1 2.1-1.4 1.4-2.1-2.1Zm2.1-14.9 1.4 1.4-2.1 2.1-1.4-1.4 2.1-2.1ZM5.6 16.9l1.4 1.4-2.1 2.1-1.4-1.4 2.1-2.1ZM23 11v2h-3v-2h3ZM4 11v2H1v-2h3Z" />
+    </svg>
+  );
+}
+
+export function MoonIcon({ className }: IconProps) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.4 5.4 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1Z" />
+    </svg>
+  );
+}
+
 export function CheckIcon({ className }: IconProps) {
   return (
     <svg className={className} fill="currentColor" viewBox="0 0 24 24">

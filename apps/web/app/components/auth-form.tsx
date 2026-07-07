@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Turnstile, type TurnstileHandle } from "./turnstile";
 
 const inputClass =
-  "w-full rounded-md border border-[#dadce0] px-3 py-2.5 text-sm text-[#202124] outline-none transition-colors focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20";
+  "w-full rounded-md border border-edge bg-transparent px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/20";
 
 const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
@@ -55,11 +55,11 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f8f9fa] px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-[#dadce0] bg-white p-8 shadow-sm">
+    <main className="flex min-h-screen items-center justify-center bg-surface-dim px-4">
+      <div className="w-full max-w-sm rounded-2xl border border-edge bg-surface p-8 shadow-sm">
         <div className="mb-6 flex flex-col items-center gap-2">
           <PenIcon className="h-10 w-10" />
-          <h1 className="text-xl font-medium text-[#202124]">
+          <h1 className="text-xl font-medium text-ink">
             {mode === "login" ? "Sign in to Note" : "Create your account"}
           </h1>
         </div>
@@ -103,7 +103,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             siteKey={turnstileSiteKey}
           />
 
-          {error && <p className="text-sm text-[#d93025]">{error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
 
           <button
             className="mt-2 rounded-md bg-[#1a73e8] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#1765cc] disabled:opacity-60"
@@ -118,18 +118,18 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-[#5f6368]">
+        <p className="mt-6 text-center text-sm text-ink-muted">
           {mode === "login" ? (
             <>
               No account?{" "}
-              <Link className="text-[#1a73e8] hover:underline" href="/register">
+              <Link className="text-accent hover:underline" href="/register">
                 Create one
               </Link>
             </>
           ) : (
             <>
               Already have an account?{" "}
-              <Link className="text-[#1a73e8] hover:underline" href="/login">
+              <Link className="text-accent hover:underline" href="/login">
                 Sign in
               </Link>
             </>
@@ -149,7 +149,7 @@ export function PenIcon({ className }: { className?: string }) {
       />
       <path
         d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"
-        fill="#5f6368"
+        fill="var(--ink-muted)"
       />
     </svg>
   );

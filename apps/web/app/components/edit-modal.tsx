@@ -48,7 +48,7 @@ export function EditModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 px-4 pt-[10vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 px-4 pt-[10vh] dark:bg-black/60"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) saveAndClose();
       }}
@@ -59,13 +59,13 @@ export function EditModal({
       >
         <div className="flex-1 overflow-y-auto p-4">
           <input
-            className="w-full bg-transparent text-lg font-medium text-[#202124] placeholder-[#5f6368] outline-none"
+            className="w-full bg-transparent text-lg font-medium text-ink placeholder-ink-muted outline-none"
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Title"
             value={title}
           />
           {showPreview ? (
-            <div className="note-markdown mt-3 text-[#202124]">
+            <div className="note-markdown mt-3 text-ink">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {content}
               </ReactMarkdown>
@@ -73,7 +73,7 @@ export function EditModal({
           ) : (
             <textarea
               autoFocus
-              className="mt-3 w-full resize-none bg-transparent font-mono text-sm text-[#202124] placeholder-[#5f6368] outline-none"
+              className="mt-3 w-full resize-none bg-transparent font-mono text-sm text-ink placeholder-ink-muted outline-none"
               onChange={(e) => setContent(e.target.value)}
               placeholder="Take a note… (markdown supported)"
               ref={contentRef}
@@ -83,11 +83,11 @@ export function EditModal({
           )}
         </div>
 
-        <div className="flex items-center gap-1 border-t border-black/10 px-3 py-2">
+        <div className="flex items-center gap-1 border-t border-black/10 px-3 py-2 dark:border-white/10">
           <div className="relative">
             <button
               aria-label="Change color"
-              className="rounded-full p-2 text-[#5f6368] hover:bg-black/10"
+              className="rounded-full p-2 text-ink-muted hover:bg-ink/10"
               onClick={() => setPaletteOpen((o) => !o)}
               title="Background options"
               type="button"
@@ -108,7 +108,7 @@ export function EditModal({
           </div>
           <button
             aria-label="Delete note"
-            className="rounded-full p-2 text-[#5f6368] hover:bg-black/10"
+            className="rounded-full p-2 text-ink-muted hover:bg-ink/10"
             onClick={onDelete}
             title="Delete"
             type="button"
@@ -116,14 +116,14 @@ export function EditModal({
             <TrashIcon className="h-5 w-5" />
           </button>
           <button
-            className="ml-1 rounded px-3 py-1.5 text-sm font-medium text-[#5f6368] hover:bg-black/10"
+            className="ml-1 rounded px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-ink/10"
             onClick={() => setShowPreview((p) => !p)}
             type="button"
           >
             {showPreview ? "Edit" : "Preview"}
           </button>
           <button
-            className="ml-auto rounded px-5 py-1.5 text-sm font-medium text-[#202124] hover:bg-black/10"
+            className="ml-auto rounded px-5 py-1.5 text-sm font-medium text-ink hover:bg-ink/10"
             onClick={saveAndClose}
             type="button"
           >
