@@ -3,6 +3,8 @@ import Link from "next/link";
 import { prisma } from "../../lib/db";
 import { noteExcerpt } from "../components/note-excerpt";
 import { colorValue } from "../components/note-types";
+import { PaginationNav } from "../components/pagination-nav";
+import { parsePage } from "../components/pagination";
 import { PublicHeader } from "../components/public-header";
 import { SignupFooter } from "../components/signup-footer";
 
@@ -11,11 +13,6 @@ const PAGE_SIZE = 24;
 export const dynamic = "force-dynamic";
 
 type Props = { searchParams: Promise<{ page?: string }> };
-
-function parsePage(value: string | undefined): number {
-  const n = Number(value);
-  return Number.isInteger(n) && n > 0 ? n : 1;
-}
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { page } = await searchParams;
@@ -41,7 +38,7 @@ export default async function PublicNotesPage({ searchParams }: Props) {
       orderBy: { createdAt: "desc" },
       skip: (currentPage - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: { user: { select: { name: true } } },
+      include: { user: { select: { id: true, name: true } } },
     }),
   ]);
 
@@ -72,22 +69,28 @@ export default async function PublicNotesPage({ searchParams }: Props) {
           <>
             <div className="columns-1 gap-3 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5">
               {notes.map((note) => (
-                <Link
-                  className="group mb-3 block break-inside-avoid rounded-lg border border-edge p-4 transition-shadow hover:shadow-md"
-                  href={`/n/${note.id}`}
+                <div
+                  className="mb-3 break-inside-avoid rounded-lg border border-edge p-4 transition-shadow hover:shadow-md"
                   key={note.id}
                   style={{ backgroundColor: colorValue(note.color) }}
                 >
-                  {note.title && (
-                    <h2 className="mb-2 text-sm font-semibold text-ink">
-                      {note.title}
-                    </h2>
-                  )}
-                  <p className="line-clamp-6 text-sm text-ink-muted">
-                    {noteExcerpt(note.content, 240)}
-                  </p>
+                  <Link className="block" href={`/n/${note.id}`}>
+                    {note.title && (
+                      <h2 className="mb-2 text-sm font-semibold text-ink">
+                        {note.title}
+                      </h2>
+                    )}
+                    <p className="line-clamp-6 text-sm text-ink-muted">
+                      {noteExcerpt(note.content, 240)}
+                    </p>
+                  </Link>
                   <div className="mt-3 flex items-center justify-between text-xs text-ink-muted">
-                    <span>{note.user.name}</span>
+                    <Link
+                      className="hover:text-accent hover:underline"
+                      href={`/u/${note.user.id}`}
+                    >
+                      {note.user.name}
+                    </Link>
                     <time dateTime={note.createdAt.toISOString()}>
                       {note.createdAt.toLocaleDateString("en-US", {
                         year: "numeric",
@@ -96,37 +99,15 @@ export default async function PublicNotesPage({ searchParams }: Props) {
                       })}
                     </time>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
 
-            {totalPages > 1 && (
-              <nav className="mt-8 flex items-center justify-center gap-4 text-sm">
-                {currentPage > 1 ? (
-                  <Link
-                    className="rounded-md px-3 py-1.5 font-medium text-accent hover:bg-accent/10"
-                    href={currentPage === 2 ? "/n" : `/n?page=${currentPage - 1}`}
-                  >
-                    ← Newer
-                  </Link>
-                ) : (
-                  <span className="px-3 py-1.5 text-ink-muted/50">← Newer</span>
-                )}
-                <span className="text-ink-muted">
-                  Page {currentPage} of {totalPages}
-                </span>
-                {currentPage < totalPages ? (
-                  <Link
-                    className="rounded-md px-3 py-1.5 font-medium text-accent hover:bg-accent/10"
-                    href={`/n?page=${currentPage + 1}`}
-                  >
-                    Older →
-                  </Link>
-                ) : (
-                  <span className="px-3 py-1.5 text-ink-muted/50">Older →</span>
-                )}
-              </nav>
-            )}
+            <PaginationNav
+              basePath="/n"
+              currentPage={currentPage}
+              totalPages={totalPages}
+            />
           </>
         )}
       </main>

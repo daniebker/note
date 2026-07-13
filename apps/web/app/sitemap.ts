@@ -8,10 +8,16 @@ export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.SITE_URL ?? "http://localhost:3002";
-  const notes = await prisma.note.findMany({
-    where: { public: true },
-    select: { id: true, updatedAt: true },
-  });
+  const [notes, authors] = await Promise.all([
+    prisma.note.findMany({
+      where: { public: true },
+      select: { id: true, updatedAt: true },
+    }),
+    prisma.user.findMany({
+      where: { notes: { some: { public: true } } },
+      select: { id: true },
+    }),
+  ]);
 
   return [
     {
@@ -19,6 +25,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 0.8,
     },
+    ...authors.map((author) => ({
+      url: `${base}/u/${author.id}`,
+      changeFrequency: "weekly" as const,
+      priority: 0.5,
+    })),
     ...notes.map((note) => ({
       url: `${base}/n/${note.id}`,
       lastModified: note.updatedAt,

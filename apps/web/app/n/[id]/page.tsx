@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSession } from "../../../lib/auth";
 import { prisma } from "../../../lib/db";
+import { breadcrumbJsonLd, Breadcrumbs } from "../../components/breadcrumbs";
 import { noteExcerpt } from "../../components/note-excerpt";
 import { NoteMarkdown } from "../../components/note-markdown";
 import { colorValue } from "../../components/note-types";
@@ -12,7 +13,10 @@ import { SignupFooter } from "../../components/signup-footer";
 type Params = { params: Promise<{ id: string }> };
 
 function getPublicNote(id: string) {
-  return prisma.note.findFirst({ where: { id, public: true } });
+  return prisma.note.findFirst({
+    where: { id, public: true },
+    include: { user: { select: { id: true, name: true } } },
+  });
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -58,6 +62,12 @@ export default async function PublicNotePage({ params }: Params) {
   const title = note.title || "Untitled note";
   const description = noteExcerpt(note.content);
 
+  const breadcrumbs = [
+    { label: "Notes", href: "/n" },
+    { label: note.user.name, href: `/u/${note.user.id}` },
+    { label: title },
+  ];
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -71,6 +81,10 @@ export default async function PublicNotePage({ params }: Params) {
     <div className="flex min-h-screen flex-col bg-surface">
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        type="application/ld+json"
+      />
+      <script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd(breadcrumbs)) }}
         type="application/ld+json"
       />
       <PublicHeader>
@@ -93,6 +107,7 @@ export default async function PublicNotePage({ params }: Params) {
       </PublicHeader>
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
+        <Breadcrumbs items={breadcrumbs} />
         <article
           className="rounded-lg border border-edge p-6"
           style={{ backgroundColor: colorValue(note.color) }}
