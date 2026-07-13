@@ -35,16 +35,17 @@
 .dark {
   color-scheme: dark;
 
-  --surface: #202124;
-  --surface-dim: #17181b;
-  --field: #303134;
-  --ink: #e8eaed;
-  --ink-muted: #9aa0a6;
-  --edge: #5f6368;
-  --accent: #8ab4f8;
-  --danger: #f28b82;
-  --code-bg: rgba(255, 255, 255, 0.1);
-  --rule: rgba(255, 255, 255, 0.2);
+  /* Dracula theme */
+  --surface: #282a36;
+  --surface-dim: #21222c;
+  --field: #44475a;
+  --ink: #f8f8f2;
+  --ink-muted: #6272a4;
+  --edge: #44475a;
+  --accent: #bd93f9;
+  --danger: #ff5555;
+  --code-bg: rgba(248, 248, 242, 0.1);
+  --rule: rgba(248, 248, 242, 0.2);
 
   /* Google Keep's dark note palette */
   --note-default: #202124;
