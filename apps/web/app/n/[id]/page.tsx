@@ -109,7 +109,7 @@ export default async function PublicNotePage({ params }: Params) {
           <Link className="font-medium text-accent hover:underline" href="/register">
             Sign up
           </Link>{" "}
-          and create your own, free.
+          and create your own.
         </p>
       </footer>
     </div>
