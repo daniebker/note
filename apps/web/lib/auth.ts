@@ -16,6 +16,7 @@ export type SessionPayload = {
   userId: string;
   email: string;
   name: string;
+  username: string;
 };
 
 export async function createSessionToken(payload: SessionPayload) {
@@ -34,7 +35,8 @@ export async function verifySessionToken(
     if (
       typeof payload.userId !== "string" ||
       typeof payload.email !== "string" ||
-      typeof payload.name !== "string"
+      typeof payload.name !== "string" ||
+      typeof payload.username !== "string"
     ) {
       return null;
     }
@@ -42,6 +44,7 @@ export async function verifySessionToken(
       userId: payload.userId,
       email: payload.email,
       name: payload.name,
+      username: payload.username,
     };
   } catch {
     return null;

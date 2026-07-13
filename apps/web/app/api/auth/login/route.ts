@@ -37,6 +37,11 @@ export async function POST(request: Request) {
     );
   }
 
-  await setSessionCookie({ userId: user.id, email: user.email, name: user.name });
+  await setSessionCookie({
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    username: user.username,
+  });
   return NextResponse.json({ ok: true });
 }

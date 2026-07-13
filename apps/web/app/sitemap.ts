@@ -11,7 +11,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.SITE_URL ?? "http://localhost:3002";
   const [notes, authors] = await Promise.all([
     noteRepository.listPublicRefs(),
-    userRepository.listAuthorIdsWithPublicNotes(),
+    userRepository.listAuthorsWithPublicNotes(),
   ]);
 
   return [
@@ -21,7 +21,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     ...authors.map((author) => ({
-      url: `${base}/u/${author.id}`,
+      url: `${base}/u/${author.username}`,
       changeFrequency: "weekly" as const,
       priority: 0.5,
     })),

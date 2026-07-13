@@ -57,7 +57,7 @@ export default async function PublicNotePage({ params }: Params) {
 
   const breadcrumbs = [
     { label: "Notes", href: "/n" },
-    { label: note.user.name, href: `/u/${note.user.id}` },
+    { label: `@${note.user.username}`, href: `/u/${note.user.username}` },
     { label: title },
   ];
 

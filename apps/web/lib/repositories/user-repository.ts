@@ -6,21 +6,29 @@ export const userRepository = {
     return prisma.user.findUnique({ where: { email } });
   },
 
+  findByUsername(username: string) {
+    return prisma.user.findUnique({ where: { username } });
+  },
+
   create(data: Prisma.UserCreateInput) {
     return prisma.user.create({ data });
   },
 
-  findPublicProfileById(id: string) {
+  updateUsername(id: string, username: string) {
+    return prisma.user.update({ where: { id }, data: { username } });
+  },
+
+  findPublicProfileByUsername(username: string) {
     return prisma.user.findUnique({
-      where: { id },
-      select: { id: true, name: true },
+      where: { username },
+      select: { id: true, name: true, username: true },
     });
   },
 
-  listAuthorIdsWithPublicNotes() {
+  listAuthorsWithPublicNotes() {
     return prisma.user.findMany({
       where: { notes: { some: { public: true } } },
-      select: { id: true },
+      select: { username: true },
     });
   },
 };

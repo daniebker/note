@@ -4,9 +4,11 @@ import { userRepository } from "../../../../lib/repositories/user-repository";
 import { hashPassword } from "../../../../lib/password";
 import { setSessionCookie } from "../../../../lib/auth";
 import { clientIpFrom, verifyTurnstileToken } from "../../../../lib/turnstile";
+import { usernameSchema } from "../../../../lib/username";
 
 const registerSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
+  username: usernameSchema,
   email: z.string().trim().toLowerCase().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   turnstileToken: z.string().min(1, "Verification is required"),
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { name, email, password, turnstileToken } = parsed.data;
+  const { name, username, email, password, turnstileToken } = parsed.data;
 
   if (!(await verifyTurnstileToken(turnstileToken, clientIpFrom(request)))) {
     return NextResponse.json(
@@ -39,12 +41,26 @@ export async function POST(request: Request) {
     );
   }
 
+  const existingUsername = await userRepository.findByUsername(username);
+  if (existingUsername) {
+    return NextResponse.json(
+      { error: "That username is already taken" },
+      { status: 409 },
+    );
+  }
+
   const user = await userRepository.create({
     name,
+    username,
     email,
     passwordHash: await hashPassword(password),
   });
 
-  await setSessionCookie({ userId: user.id, email: user.email, name: user.name });
+  await setSessionCookie({
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    username: user.username,
+  });
   return NextResponse.json({ ok: true });
 }

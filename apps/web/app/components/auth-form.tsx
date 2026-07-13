@@ -29,6 +29,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     };
     if (mode === "register") {
       body.name = String(form.get("name") ?? "");
+      body.username = String(form.get("username") ?? "");
     }
     try {
       const res = await fetch(`/api/auth/${mode}`, {
@@ -72,6 +73,19 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               name="name"
               placeholder="Name"
               required
+              type="text"
+            />
+          )}
+          {mode === "register" && (
+            <input
+              autoComplete="username"
+              className={inputClass}
+              minLength={2}
+              name="username"
+              pattern="[a-zA-Z0-9_-]+"
+              placeholder="Username"
+              required
+              title="Letters, numbers, underscores, and hyphens only"
               type="text"
             />
           )}

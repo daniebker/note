@@ -39,7 +39,7 @@ export const noteRepository = {
   findPublicById(id: string) {
     return prisma.note.findFirst({
       where: { id, public: true },
-      include: { user: { select: { id: true, name: true } } },
+      include: { user: { select: { id: true, name: true, username: true } } },
     });
   },
 
@@ -53,7 +53,7 @@ export const noteRepository = {
       orderBy: { createdAt: "desc" },
       skip,
       take,
-      include: { user: { select: { id: true, name: true } } },
+      include: { user: { select: { id: true, name: true, username: true } } },
     });
   },
 

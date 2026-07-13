@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Composer } from "./composer";
 import { EditModal } from "./edit-modal";
@@ -152,9 +153,12 @@ export function NotesApp({
           />
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          <span className="hidden text-sm text-ink-muted sm:inline">
+          <Link
+            className="hidden text-sm text-ink-muted hover:text-accent hover:underline sm:inline"
+            href="/settings"
+          >
             {userName}
-          </span>
+          </Link>
           <ThemeToggle />
           <button
             className="rounded-md px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"

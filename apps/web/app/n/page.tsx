@@ -84,9 +84,9 @@ export default async function PublicNotesPage({ searchParams }: Props) {
                   <div className="mt-3 flex items-center justify-between text-xs text-ink-muted">
                     <Link
                       className="hover:text-accent hover:underline"
-                      href={`/u/${note.user.id}`}
+                      href={`/u/${note.user.username}`}
                     >
-                      {note.user.name}
+                      @{note.user.username}
                     </Link>
                     <time dateTime={note.createdAt.toISOString()}>
                       {note.createdAt.toLocaleDateString("en-US", {
