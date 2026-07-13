@@ -3,8 +3,10 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3002"),
   title: "Note",
   description: "A Google Keep–style markdown note taking app",
+  robots: { index: false, follow: false },
 };
 
 // Applies the saved (or system) theme before first paint to avoid a flash.

@@ -5,7 +5,8 @@
     "DATABASE_URL",
     "SESSION_SECRET",
     "NODE_ENV",
-    "TURNSTILE_SECRET_KEY"
+    "TURNSTILE_SECRET_KEY",
+    "SITE_URL"
   ],
   "tasks": {
     "build": {

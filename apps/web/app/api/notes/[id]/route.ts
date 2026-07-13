@@ -9,6 +9,7 @@ const updateNoteSchema = z.object({
   color: z.string().max(30).optional(),
   pinned: z.boolean().optional(),
   archived: z.boolean().optional(),
+  public: z.boolean().optional(),
 });
 
 type Params = { params: Promise<{ id: string }> };

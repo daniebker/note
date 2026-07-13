@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ColorPicker } from "./color-picker";
 import { NoteMarkdown } from "./note-markdown";
-import { PaletteIcon, TrashIcon } from "./icons";
+import { CheckIcon, GlobeIcon, LinkIcon, PaletteIcon, TrashIcon } from "./icons";
 import { colorValue, type NoteData } from "./note-types";
 
 export function EditModal({
@@ -11,18 +11,28 @@ export function EditModal({
   onSave,
   onDelete,
   onClose,
+  onTogglePublic,
 }: {
   note: NoteData;
   onSave: (changes: { title: string; content: string; color: string }) => void;
   onDelete: () => void;
   onClose: () => void;
+  onTogglePublic: () => void;
 }) {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const [color, setColor] = useState(note.color);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  async function copyPublicLink() {
+    const url = `${window.location.origin}/n/${note.id}`;
+    await navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 1500);
+  }
 
   function saveAndClose() {
     onSave({ title: title.trim(), content, color });
@@ -112,6 +122,33 @@ export function EditModal({
           >
             <TrashIcon className="h-5 w-5" />
           </button>
+          <button
+            aria-label={note.public ? "Make private" : "Make public"}
+            aria-pressed={note.public}
+            className={`rounded-full p-2 hover:bg-ink/10 ${
+              note.public ? "text-accent" : "text-ink-muted"
+            }`}
+            onClick={onTogglePublic}
+            title={note.public ? "Public — anyone with the link can view" : "Make public"}
+            type="button"
+          >
+            <GlobeIcon className="h-5 w-5" />
+          </button>
+          {note.public && (
+            <button
+              aria-label="Copy public link"
+              className="rounded-full p-2 text-ink-muted hover:bg-ink/10"
+              onClick={copyPublicLink}
+              title="Copy public link"
+              type="button"
+            >
+              {linkCopied ? (
+                <CheckIcon className="h-5 w-5" />
+              ) : (
+                <LinkIcon className="h-5 w-5" />
+              )}
+            </button>
+          )}
           <button
             className="ml-1 rounded px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-ink/10"
             onClick={() => setShowPreview((p) => !p)}

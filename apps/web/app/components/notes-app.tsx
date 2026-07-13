@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Composer } from "./composer";
 import { EditModal } from "./edit-modal";
 import { PenIcon } from "./auth-form";
@@ -30,11 +30,21 @@ export function NotesApp({
   userEmail: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [notes, setNotes] = useState<NoteData[]>(initialNotes);
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const editingNote = notes.find((n) => n.id === editingId) ?? null;
+
+  // Opens a note directly when arriving via a public note page's "Edit" link.
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (editId && notes.some((n) => n.id === editId)) {
+      setEditingId(editId);
+      router.replace("/", { scroll: false });
+    }
+  }, [searchParams, notes, router]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -214,6 +224,9 @@ export function NotesApp({
           onClose={() => setEditingId(null)}
           onDelete={() => deleteNote(editingNote.id)}
           onSave={(changes) => updateNote(editingNote.id, changes)}
+          onTogglePublic={() =>
+            updateNote(editingNote.id, { public: !editingNote.public })
+          }
         />
       )}
     </div>

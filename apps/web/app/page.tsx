@@ -20,6 +20,7 @@ export default async function Page() {
         content: n.content,
         color: n.color,
         pinned: n.pinned,
+        public: n.public,
         createdAt: n.createdAt.toISOString(),
         updatedAt: n.updatedAt.toISOString(),
       }))}
