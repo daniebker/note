@@ -1,6 +1,14 @@
+-- Backfill: existing rows have no username yet (the column was added nullable
+-- in the prior migration). Fall back to the id, which is already unique, so
+-- the NOT NULL + UNIQUE constraints below don't fail against existing data.
+UPDATE "User" SET "username" = "id" WHERE "username" IS NULL;
+
 -- RedefineTables
 PRAGMA defer_foreign_keys=ON;
 PRAGMA foreign_keys=OFF;
+-- A prior failed run of this migration may have left this scratch table
+-- behind (SQLite doesn't transact across the PRAGMA toggles above).
+DROP TABLE IF EXISTS "new_User";
 CREATE TABLE "new_User" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "email" TEXT NOT NULL,
