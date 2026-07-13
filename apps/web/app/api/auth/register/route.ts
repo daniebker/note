@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "../../../../lib/db";
+import { userRepository } from "../../../../lib/repositories/user-repository";
 import { hashPassword } from "../../../../lib/password";
 import { setSessionCookie } from "../../../../lib/auth";
 import { clientIpFrom, verifyTurnstileToken } from "../../../../lib/turnstile";
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await userRepository.findByEmail(email);
   if (existing) {
     return NextResponse.json(
       { error: "An account with this email already exists" },
@@ -39,8 +39,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const user = await prisma.user.create({
-    data: { name, email, passwordHash: await hashPassword(password) },
+  const user = await userRepository.create({
+    name,
+    email,
+    passwordHash: await hashPassword(password),
   });
 
   await setSessionCookie({ userId: user.id, email: user.email, name: user.name });

@@ -1,16 +1,13 @@
 import { redirect } from "next/navigation";
 import { getSession } from "../lib/auth";
-import { prisma } from "../lib/db";
+import { noteRepository } from "../lib/repositories/note-repository";
 import { NotesApp } from "./components/notes-app";
 
 export default async function Page() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const notes = await prisma.note.findMany({
-    where: { userId: session.userId, archived: false },
-    orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
-  });
+  const notes = await noteRepository.listActiveForUser(session.userId);
 
   return (
     <NotesApp

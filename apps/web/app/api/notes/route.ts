@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "../../../lib/db";
+import { noteRepository } from "../../../lib/repositories/note-repository";
 import { getSession } from "../../../lib/auth";
 
 const createNoteSchema = z.object({
@@ -14,10 +14,7 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const notes = await prisma.note.findMany({
-    where: { userId: session.userId, archived: false },
-    orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
-  });
+  const notes = await noteRepository.listActiveForUser(session.userId);
   return NextResponse.json({ notes });
 }
 
@@ -31,8 +28,6 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
-  const note = await prisma.note.create({
-    data: { ...parsed.data, userId: session.userId },
-  });
+  const note = await noteRepository.create(session.userId, parsed.data);
   return NextResponse.json({ note }, { status: 201 });
 }

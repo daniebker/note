@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
-import { prisma } from "../lib/db";
+import { noteRepository } from "../lib/repositories/note-repository";
+import { userRepository } from "../lib/repositories/user-repository";
 
 // The sitemap lists public notes, which change independently of deploys, and
 // the build-time database has no schema (migrations run at container start)
@@ -9,14 +10,8 @@ export const dynamic = "force-dynamic";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.SITE_URL ?? "http://localhost:3002";
   const [notes, authors] = await Promise.all([
-    prisma.note.findMany({
-      where: { public: true },
-      select: { id: true, updatedAt: true },
-    }),
-    prisma.user.findMany({
-      where: { notes: { some: { public: true } } },
-      select: { id: true },
-    }),
+    noteRepository.listPublicRefs(),
+    userRepository.listAuthorIdsWithPublicNotes(),
   ]);
 
   return [

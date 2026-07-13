@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "../../../../lib/db";
+import { userRepository } from "../../../../lib/repositories/user-repository";
 import { verifyPassword } from "../../../../lib/password";
 import { setSessionCookie } from "../../../../lib/auth";
 import { clientIpFrom, verifyTurnstileToken } from "../../../../lib/turnstile";
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       { status: 403 },
     );
   }
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await userRepository.findByEmail(email);
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     return NextResponse.json(
       { error: "Invalid email or password" },

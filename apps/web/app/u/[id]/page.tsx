@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "../../../lib/db";
+import { noteRepository } from "../../../lib/repositories/note-repository";
+import { userRepository } from "../../../lib/repositories/user-repository";
 import { breadcrumbJsonLd, Breadcrumbs } from "../../components/breadcrumbs";
 import { noteExcerpt } from "../../components/note-excerpt";
 import { colorValue } from "../../components/note-types";
@@ -16,13 +17,9 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ page?: string }> };
 
-function getUser(id: string) {
-  return prisma.user.findUnique({ where: { id }, select: { id: true, name: true } });
-}
-
 export async function generateMetadata({ params, searchParams }: Params): Promise<Metadata> {
   const { id } = await params;
-  const user = await getUser(id);
+  const user = await userRepository.findPublicProfileById(id);
   if (!user) {
     return { title: "User not found", robots: { index: false, follow: false } };
   }
@@ -41,17 +38,15 @@ export async function generateMetadata({ params, searchParams }: Params): Promis
 
 export default async function UserNotesPage({ params, searchParams }: Params) {
   const { id } = await params;
-  const user = await getUser(id);
+  const user = await userRepository.findPublicProfileById(id);
   if (!user) notFound();
 
   const { page } = await searchParams;
   const currentPage = parsePage(page);
 
   const [total, notes] = await Promise.all([
-    prisma.note.count({ where: { userId: id, public: true } }),
-    prisma.note.findMany({
-      where: { userId: id, public: true },
-      orderBy: { createdAt: "desc" },
+    noteRepository.countPublicByUser(id),
+    noteRepository.listPublicByUser(id, {
       skip: (currentPage - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),

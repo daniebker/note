@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "../../../../lib/db";
+import { noteRepository } from "../../../../lib/repositories/note-repository";
 import { getSession } from "../../../../lib/auth";
 
 const updateNoteSchema = z.object({
@@ -25,14 +25,11 @@ export async function PATCH(request: Request, { params }: Params) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
-  const { count } = await prisma.note.updateMany({
-    where: { id, userId: session.userId },
-    data: parsed.data,
-  });
+  const count = await noteRepository.updateForUser(id, session.userId, parsed.data);
   if (count === 0) {
     return NextResponse.json({ error: "Note not found" }, { status: 404 });
   }
-  const note = await prisma.note.findUnique({ where: { id } });
+  const note = await noteRepository.findById(id);
   return NextResponse.json({ note });
 }
 
@@ -42,9 +39,7 @@ export async function DELETE(_request: Request, { params }: Params) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;
-  const { count } = await prisma.note.deleteMany({
-    where: { id, userId: session.userId },
-  });
+  const count = await noteRepository.deleteForUser(id, session.userId);
   if (count === 0) {
     return NextResponse.json({ error: "Note not found" }, { status: 404 });
   }

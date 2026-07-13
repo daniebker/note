@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { prisma } from "../../lib/db";
+import { noteRepository } from "../../lib/repositories/note-repository";
 import { noteExcerpt } from "../components/note-excerpt";
 import { colorValue } from "../components/note-types";
 import { PaginationNav } from "../components/pagination-nav";
@@ -32,13 +32,10 @@ export default async function PublicNotesPage({ searchParams }: Props) {
   const currentPage = parsePage(page);
 
   const [total, notes] = await Promise.all([
-    prisma.note.count({ where: { public: true } }),
-    prisma.note.findMany({
-      where: { public: true },
-      orderBy: { createdAt: "desc" },
+    noteRepository.countPublic(),
+    noteRepository.listPublic({
       skip: (currentPage - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: { user: { select: { id: true, name: true } } },
     }),
   ]);
 

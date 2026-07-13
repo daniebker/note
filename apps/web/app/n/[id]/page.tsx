@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSession } from "../../../lib/auth";
-import { prisma } from "../../../lib/db";
+import { noteRepository } from "../../../lib/repositories/note-repository";
 import { breadcrumbJsonLd, Breadcrumbs } from "../../components/breadcrumbs";
 import { noteExcerpt } from "../../components/note-excerpt";
 import { NoteMarkdown } from "../../components/note-markdown";
@@ -12,16 +12,9 @@ import { SignupFooter } from "../../components/signup-footer";
 
 type Params = { params: Promise<{ id: string }> };
 
-function getPublicNote(id: string) {
-  return prisma.note.findFirst({
-    where: { id, public: true },
-    include: { user: { select: { id: true, name: true } } },
-  });
-}
-
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
-  const note = await getPublicNote(id);
+  const note = await noteRepository.findPublicById(id);
   if (!note) {
     return { title: "Note not found", robots: { index: false, follow: false } };
   }
@@ -53,7 +46,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function PublicNotePage({ params }: Params) {
   const { id } = await params;
-  const note = await getPublicNote(id);
+  const note = await noteRepository.findPublicById(id);
   if (!note) notFound();
 
   const session = await getSession();
