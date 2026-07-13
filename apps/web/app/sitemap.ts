@@ -13,10 +13,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     select: { id: true, updatedAt: true },
   });
 
-  return notes.map((note) => ({
-    url: `${base}/n/${note.id}`,
-    lastModified: note.updatedAt,
-    changeFrequency: "weekly",
-    priority: 0.6,
-  }));
+  return [
+    {
+      url: `${base}/n`,
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    ...notes.map((note) => ({
+      url: `${base}/n/${note.id}`,
+      lastModified: note.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    })),
+  ];
 }

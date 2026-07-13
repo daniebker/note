@@ -3,10 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSession } from "../../../lib/auth";
 import { prisma } from "../../../lib/db";
-import { PenIcon } from "../../components/auth-form";
 import { noteExcerpt } from "../../components/note-excerpt";
 import { NoteMarkdown } from "../../components/note-markdown";
 import { colorValue } from "../../components/note-types";
+import { PublicHeader } from "../../components/public-header";
+import { SignupFooter } from "../../components/signup-footer";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -72,20 +73,24 @@ export default async function PublicNotePage({ params }: Params) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         type="application/ld+json"
       />
-      <header className="flex items-center justify-between border-b border-edge px-4 py-3 sm:px-6">
-        <Link className="flex items-center gap-2" href="/">
-          <PenIcon className="h-7 w-7" />
-          <span className="text-lg text-ink-muted">Note</span>
-        </Link>
-        {isAuthor && (
+      <PublicHeader>
+        <div className="flex items-center gap-3">
           <Link
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
-            href={`/?edit=${note.id}`}
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-ink/10"
+            href="/n"
           >
-            Edit note
+            Browse public notes
           </Link>
-        )}
-      </header>
+          {isAuthor && (
+            <Link
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
+              href={`/?edit=${note.id}`}
+            >
+              Edit note
+            </Link>
+          )}
+        </div>
+      </PublicHeader>
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
         <article
@@ -103,15 +108,7 @@ export default async function PublicNotePage({ params }: Params) {
         </article>
       </main>
 
-      <footer className="border-t border-edge px-4 py-8 text-center sm:px-6">
-        <p className="text-sm text-ink-muted">
-          Like taking notes like this?{" "}
-          <Link className="font-medium text-accent hover:underline" href="/register">
-            Sign up
-          </Link>{" "}
-          and create your own.
-        </p>
-      </footer>
+      <SignupFooter />
     </div>
   );
 }
