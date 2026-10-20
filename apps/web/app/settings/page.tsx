@@ -6,5 +6,10 @@ export default async function SettingsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  return <SettingsForm currentUsername={session.username} />;
+  return (
+    <SettingsForm
+      currentEmail={session.email}
+      currentUsername={session.username}
+    />
+  );
 }

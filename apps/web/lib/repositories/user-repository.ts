@@ -2,6 +2,10 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 
 export const userRepository = {
+  findById(id: string) {
+    return prisma.user.findUnique({ where: { id } });
+  },
+
   findByEmail(email: string) {
     return prisma.user.findUnique({ where: { email } });
   },
@@ -16,6 +20,10 @@ export const userRepository = {
 
   updateUsername(id: string, username: string) {
     return prisma.user.update({ where: { id }, data: { username } });
+  },
+
+  updateEmail(id: string, email: string) {
+    return prisma.user.update({ where: { id }, data: { email } });
   },
 
   findPublicProfileByUsername(username: string) {
