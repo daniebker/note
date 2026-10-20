@@ -7,7 +7,7 @@ export default async function Page() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const notes = await noteRepository.listActiveForUser(session.userId);
+  const notes = await noteRepository.listForUser(session.userId);
 
   return (
     <NotesApp
@@ -17,6 +17,7 @@ export default async function Page() {
         content: n.content,
         color: n.color,
         pinned: n.pinned,
+        archived: n.archived,
         public: n.public,
         createdAt: n.createdAt.toISOString(),
         updatedAt: n.updatedAt.toISOString(),

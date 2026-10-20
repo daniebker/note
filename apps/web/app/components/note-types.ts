@@ -4,6 +4,7 @@ export type NoteData = {
   content: string;
   color: string;
   pinned: boolean;
+  archived: boolean;
   public: boolean;
   createdAt: string;
   updatedAt: string;

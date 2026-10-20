@@ -3,7 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { ColorPicker } from "./color-picker";
 import { NoteMarkdown } from "./note-markdown";
-import { CheckIcon, GlobeIcon, LinkIcon, PaletteIcon, TrashIcon } from "./icons";
+import {
+  ArchiveIcon,
+  CheckIcon,
+  GlobeIcon,
+  LinkIcon,
+  PaletteIcon,
+  TrashIcon,
+  UnarchiveIcon,
+} from "./icons";
 import { colorValue, type NoteData } from "./note-types";
 
 export function EditModal({
@@ -12,12 +20,14 @@ export function EditModal({
   onDelete,
   onClose,
   onTogglePublic,
+  onToggleArchive,
 }: {
   note: NoteData;
   onSave: (changes: { title: string; content: string; color: string }) => void;
   onDelete: () => void;
   onClose: () => void;
   onTogglePublic: () => void;
+  onToggleArchive: () => void;
 }) {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
@@ -36,6 +46,13 @@ export function EditModal({
 
   function saveAndClose() {
     onSave({ title: title.trim(), content, color });
+    onClose();
+  }
+
+  // Archiving moves the note out of the current view, so save and close.
+  function toggleArchiveAndClose() {
+    onSave({ title: title.trim(), content, color });
+    onToggleArchive();
     onClose();
   }
 
@@ -113,6 +130,19 @@ export function EditModal({
               </div>
             )}
           </div>
+          <button
+            aria-label={note.archived ? "Unarchive note" : "Archive note"}
+            className="rounded-full p-2 text-ink-muted hover:bg-ink/10"
+            onClick={toggleArchiveAndClose}
+            title={note.archived ? "Unarchive" : "Archive"}
+            type="button"
+          >
+            {note.archived ? (
+              <UnarchiveIcon className="h-5 w-5" />
+            ) : (
+              <ArchiveIcon className="h-5 w-5" />
+            )}
+          </button>
           <button
             aria-label="Delete note"
             className="rounded-full p-2 text-ink-muted hover:bg-ink/10"
