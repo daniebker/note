@@ -35,51 +35,60 @@ export function NotesApp({
   const [notes, setNotes] = useState<NoteData[]>(initialNotes);
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [view, setView] = useState<"notes" | "archive">("notes");
 
   const editingNote = notes.find((n) => n.id === editingId) ?? null;
 
   // Opens a note directly when arriving via a public note page's "Edit" link.
   useEffect(() => {
     const editId = searchParams.get("edit");
-    if (editId && notes.some((n) => n.id === editId)) {
-      setEditingId(editId);
+    const target = editId ? notes.find((n) => n.id === editId) : undefined;
+    if (target) {
+      setView(target.archived ? "archive" : "notes");
+      setEditingId(target.id);
       router.replace("/", { scroll: false });
     }
   }, [searchParams, notes, router]);
 
+  const viewNotes = useMemo(
+    () => notes.filter((n) => n.archived === (view === "archive")),
+    [notes, view],
+  );
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return notes;
+    if (!q) return viewNotes;
     // "#foo" searches by tag; anything else is a plain text search.
     if (q.startsWith("#") && q.length > 1) {
       const tag = q.slice(1);
-      return notes.filter((n) =>
+      return viewNotes.filter((n) =>
         extractTags(n.title, n.content).some((t) =>
           t.toLowerCase().startsWith(tag),
         ),
       );
     }
-    return notes.filter(
+    return viewNotes.filter(
       (n) =>
         n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q),
     );
-  }, [notes, query]);
+  }, [viewNotes, query]);
 
   const allTags = useMemo(() => {
     const seen = new Map<string, string>();
-    for (const n of notes) {
+    for (const n of viewNotes) {
       for (const t of extractTags(n.title, n.content)) {
         const key = t.toLowerCase();
         if (!seen.has(key)) seen.set(key, t);
       }
     }
     return [...seen.values()].sort((a, b) => a.localeCompare(b));
-  }, [notes]);
+  }, [viewNotes]);
 
   const activeTag = query.trim().toLowerCase().startsWith("#")
     ? query.trim().slice(1).toLowerCase()
     : null;
 
+  // Archived notes are never pinned, so the archive view is a single grid.
   const pinned = filtered.filter((n) => n.pinned);
   const others = filtered.filter((n) => !n.pinned);
 
@@ -103,6 +112,26 @@ export function NotesApp({
       method: "PATCH",
       body: JSON.stringify(changes),
     });
+  }
+
+  // Pinning an archived note restores it; archiving a note unpins it.
+  function togglePin(note: NoteData) {
+    return updateNote(
+      note.id,
+      note.archived ? { pinned: true, archived: false } : { pinned: !note.pinned },
+    );
+  }
+
+  function toggleArchive(note: NoteData) {
+    return updateNote(
+      note.id,
+      note.archived ? { archived: false } : { archived: true, pinned: false },
+    );
+  }
+
+  function switchView(next: "notes" | "archive") {
+    setView(next);
+    setQuery("");
   }
 
   async function deleteNote(id: string) {
@@ -129,7 +158,8 @@ export function NotesApp({
             onDelete={() => deleteNote(note.id)}
             onOpen={() => setEditingId(note.id)}
             onTagClick={(tag) => setQuery(`#${tag}`)}
-            onTogglePin={() => updateNote(note.id, { pinned: !note.pinned })}
+            onToggleArchive={() => toggleArchive(note)}
+            onTogglePin={() => togglePin(note)}
           />
         ))}
       </div>
@@ -171,7 +201,25 @@ export function NotesApp({
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <Composer onCreate={createNote} />
+        <nav className="mb-6 flex justify-center gap-2">
+          {(["notes", "archive"] as const).map((v) => (
+            <button
+              aria-pressed={view === v}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                view === v
+                  ? "bg-accent/15 text-accent"
+                  : "text-ink-muted hover:bg-ink/10"
+              }`}
+              key={v}
+              onClick={() => switchView(v)}
+              type="button"
+            >
+              {v === "notes" ? "Notes" : "Archive"}
+            </button>
+          ))}
+        </nav>
+
+        {view === "notes" && <Composer onCreate={createNote} />}
 
         {allTags.length > 0 && (
           <div className="mb-6 flex flex-wrap justify-center gap-2">
@@ -197,9 +245,11 @@ export function NotesApp({
 
         {filtered.length === 0 ? (
           <p className="mt-16 text-center text-sm text-ink-muted">
-            {notes.length === 0
-              ? "Notes you add appear here"
-              : "No matching notes"}
+            {viewNotes.length > 0
+              ? "No matching notes"
+              : view === "archive"
+                ? "Your archived notes appear here"
+                : "Notes you add appear here"}
           </p>
         ) : pinned.length > 0 ? (
           <>
@@ -228,6 +278,7 @@ export function NotesApp({
           onClose={() => setEditingId(null)}
           onDelete={() => deleteNote(editingNote.id)}
           onSave={(changes) => updateNote(editingNote.id, changes)}
+          onToggleArchive={() => toggleArchive(editingNote)}
           onTogglePublic={() =>
             updateNote(editingNote.id, { public: !editingNote.public })
           }

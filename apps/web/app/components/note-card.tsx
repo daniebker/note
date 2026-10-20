@@ -4,7 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { ColorPicker } from "./color-picker";
 import { NoteMarkdown } from "./note-markdown";
 import { downloadNoteAsMarkdown } from "./note-download";
-import { MoreIcon, PaletteIcon, PinIcon, TrashIcon } from "./icons";
+import {
+  ArchiveIcon,
+  MoreIcon,
+  PaletteIcon,
+  PinIcon,
+  TrashIcon,
+  UnarchiveIcon,
+} from "./icons";
 import { colorValue, type NoteData } from "./note-types";
 
 export function NoteCard({
@@ -12,6 +19,7 @@ export function NoteCard({
   authorEmail,
   onOpen,
   onTogglePin,
+  onToggleArchive,
   onColorChange,
   onDelete,
   onTagClick,
@@ -20,6 +28,7 @@ export function NoteCard({
   authorEmail: string;
   onOpen: () => void;
   onTogglePin: () => void;
+  onToggleArchive: () => void;
   onColorChange: (color: string) => void;
   onDelete: () => void;
   onTagClick: (tag: string) => void;
@@ -106,6 +115,19 @@ export function NoteCard({
             </div>
           )}
         </div>
+        <button
+          aria-label={note.archived ? "Unarchive note" : "Archive note"}
+          className="rounded-full p-1.5 text-ink-muted hover:bg-ink/10"
+          onClick={onToggleArchive}
+          title={note.archived ? "Unarchive" : "Archive"}
+          type="button"
+        >
+          {note.archived ? (
+            <UnarchiveIcon className="h-4.5 w-4.5" />
+          ) : (
+            <ArchiveIcon className="h-4.5 w-4.5" />
+          )}
+        </button>
         <button
           aria-label="Delete note"
           className="rounded-full p-1.5 text-ink-muted hover:bg-ink/10"

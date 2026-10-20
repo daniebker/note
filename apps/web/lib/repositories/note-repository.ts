@@ -11,6 +11,13 @@ export const noteRepository = {
     });
   },
 
+  listForUser(userId: string) {
+    return prisma.note.findMany({
+      where: { userId },
+      orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
+    });
+  },
+
   findById(id: string) {
     return prisma.note.findUnique({ where: { id } });
   },
