@@ -9,6 +9,9 @@ ENV TURBO_TELEMETRY_DISABLED=1 \
 RUN apt-get update -qq \
     && apt-get install -y --no-install-recommends openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+# Match the exact npm version pinned in the root package.json's devEngines;
+# npm ci refuses to run under whatever npm the node image happens to bundle.
+RUN npm install -g npm@11.16.0
 
 # --- Prune the monorepo down to what "web" needs -----------------------------
 FROM base AS pruner
