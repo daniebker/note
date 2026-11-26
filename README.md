@@ -1,58 +1,113 @@
-# Turborepo Tailwind CSS starter
+# Note
 
-This Turborepo starter is maintained by the Turborepo core team.
+A Google Keep–style markdown note taking app for the Linux desktop and Android.
+Notes are plain markdown files in a folder on a WebDAV server.
 
-## Using this example
+## Linux
 
-Run the following command:
+Build the AppImage (or download it from a "Build apps" workflow run):
 
 ```sh
-npx create-turbo@latest -e with-tailwind
+npm install
+npm run dist
+chmod +x apps/desktop/release/Note-*.AppImage
+./apps/desktop/release/Note-*.AppImage
 ```
 
-## What's inside?
+On first start, enter the URL of the WebDAV folder for your notes and your
+credentials. The password is encrypted with the system keyring; without a
+keyring it isn't saved and you're asked for it on each start.
 
-This Turborepo includes the following packages/apps:
+## Android
 
-### Apps and Packages
+Needs Android 7 or later. Building needs JDK 21 and the Android SDK (platform
+36), found through `JAVA_HOME` and `ANDROID_HOME`:
 
-- `docs`: a [Next.js](https://nextjs.org/) app with [Tailwind CSS](https://tailwindcss.com/)
-- `web`: another [Next.js](https://nextjs.org/) app with [Tailwind CSS](https://tailwindcss.com/)
-- `ui`: a stub React component library with [Tailwind CSS](https://tailwindcss.com/) shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Building packages/ui
-
-This example is set up to produce compiled styles for `ui` components into the `dist` directory. The component `.tsx` files are consumed by the Next.js apps directly using `transpilePackages` in `next.config.ts`. This was chosen for several reasons:
-
-- Make sharing one `tailwind.config.ts` to apps and packages as easy as possible.
-- Make package compilation simple by only depending on the Next.js Compiler and `tailwindcss`.
-- Ensure Tailwind classes do not overwrite each other. The `ui` package uses a `ui-` prefix for it's classes.
-- Maintain clear package export boundaries.
-
-Another option is to consume `packages/ui` directly from source without building. If using this option, you will need to update the `tailwind.config.ts` in your apps to be aware of your package locations, so it can find all usages of the `tailwindcss` class names for CSS compilation.
-
-For example, in [tailwind.config.ts](packages/tailwind-config/tailwind.config.ts):
-
-```js
-  content: [
-    // app content
-    `src/**/*.{js,ts,jsx,tsx}`,
-    // include packages if not transpiling
-    "../../packages/ui/*.{js,ts,jsx,tsx}",
-  ],
+```sh
+npm install
+npm run apk
+adb install apps/android/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-If you choose this strategy, you can remove the `tailwindcss` and `autoprefixer` dependencies from the `ui` package.
+This is a debug build, signed with a key specific to the machine that built it,
+so a build from elsewhere (including CI) can't update it in place. The password
+is encrypted with a key held in the Android Keystore. Self-signed certificates
+aren't trusted.
 
-### Utilities
+## Releases
 
-This Turborepo has some additional tools already setup for you:
+Pushing a version tag builds the AppImage and a signed APK, and publishes them
+as a GitHub release:
 
-- [Tailwind CSS](https://tailwindcss.com/) for styles
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Tags with a suffix, such as `v1.0.0-rc.1`, are marked as pre-releases.
+
+The APK needs a signing key, set up once. Keep the keystore and its password
+backed up somewhere safe: without them, installed copies can't be updated.
+
+```sh
+keytool -genkeypair -v -keystore note-release.keystore -alias note \
+  -keyalg RSA -keysize 4096 -validity 10000
+base64 -w0 note-release.keystore | gh secret set ANDROID_KEYSTORE_BASE64
+gh secret set ANDROID_KEYSTORE_PASSWORD   # the password you chose
+gh secret set ANDROID_KEY_ALIAS --body note
+gh secret set ANDROID_KEY_PASSWORD        # the same password
+```
+
+Don't commit the keystore.
+
+## Note files
+
+Each note is `<folder>/<name>.md`:
+
+```markdown
+---
+title: Groceries
+color: mint
+pinned: false
+archived: false
+created: 2026-11-26T20:00:00.000Z
+updated: 2026-11-26T20:00:00.000Z
+---
+
+The note body.
+```
+
+Markdown files added by other tools show up too; the frontmatter is optional and
+unknown fields are preserved. Changes made elsewhere are loaded when the window
+regains focus. Subfolders and hidden files are ignored.
+
+## Development
+
+```sh
+npm run lint && npm run check-types && npm test   # tests need rclone
+(cd apps/desktop && npm run dev)
+(cd apps/android/android && ./gradlew testDebugUnitTest)   # after npm run apk
+```
+
+To try it without a server:
+`rclone serve webdav ./webdav-data --addr localhost:8080`
+
+## Moving from the web app
+
+Copy the web app's SQLite database to your machine, then export its notes
+(Node 22.13 or later):
+
+```sh
+node apps/desktop/scripts/export-legacy-notes.mjs note.db exported-notes
+```
+
+This writes one folder per user. Upload the contents of yours to the WebDAV
+folder.
+
+## Layout
+
+- `apps/desktop`: the Electron app
+- `apps/android`: the Capacitor app and its native Java code
+- `packages/notes`: the UI and note storage both apps share
+- `apps/docs`: Next.js starter app
+- `packages/*`: shared UI, ESLint, Tailwind and TypeScript config

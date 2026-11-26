@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Note</string>
+    <string name="title_activity_main">Note</string>
+    <string name="package_name">io.github.daniebker.note</string>
+    <string name="custom_url_scheme">io.github.daniebker.note</string>
+</resources>

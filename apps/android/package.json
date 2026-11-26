@@ -1,0 +1,31 @@
+{
+  "name": "note-android",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "sync": "npm run build && cap sync android",
+    "apk": "npm run sync && cd android && ./gradlew assembleDebug",
+    "test": "node --test \"test/*.test.ts\"",
+    "lint": "eslint --max-warnings 0",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.3",
+    "@capacitor/app": "^8",
+    "@capacitor/core": "^8.6.3",
+    "@repo/notes": "*"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.3",
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "@tailwindcss/cli": "^4.3.5",
+    "@types/node": "^22.15.30",
+    "@types/react-dom": "^19.1.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.1",
+    "typescript": "5.9.2"
+  }
+}
