@@ -206,7 +206,7 @@ test("changes to different parts of a note are merged", async () => {
   assert.equal(notes[0]?.content, "rewritten");
   assert.equal(notes[0]?.pinned, true);
   assert.equal(notes[0]?.color, "mint");
-  assert.deepEqual(notes[0]?.attachments.toSorted(), [
+  assert.deepEqual([...(notes[0]?.attachments ?? [])].sort(), [
     "from a.txt",
     "from b.txt",
   ]);
@@ -445,4 +445,56 @@ test("the service works offline and keeps unsent changes", async () => {
   // With everything sent, disconnecting deletes the copy.
   ok(await third.disconnect());
   assert.deepEqual(await mirrored(), {});
+});
+
+test("devices converge when edited while syncing", async () => {
+  let seed = 5;
+  const random = (n: number) => {
+    seed = (seed * 48271) % 2147483647;
+    return seed % n;
+  };
+  const { onServer, device } = await setup();
+  const devices = [device(), device()];
+  for (const { dir } of devices) await mkdir(dir, { recursive: true });
+  // The devices take turns on the server, as plain WebDAV can't stop two that
+  // write one file at the same instant. Edits carry on during each sync.
+  let turns = Promise.resolve();
+
+  for (let step = 0; step < 150; step++) {
+    const { store, engine } = devices[random(2)]!;
+    const action = random(8);
+    if (action >= 6) turns = turns.then(() => engine.run());
+    // As the service does it.
+    await engine.lock(async () => {
+      const notes = await store.list();
+      const note = notes[random(notes.length || 1)];
+      if (action === 0 || !note) await store.create({ title: `n${step}` });
+      else if (action === 1) {
+        await store.update(note.id, { content: `c${step}` });
+      } else if (action === 2) {
+        await store.update(note.id, { pinned: !note.pinned });
+      } else if (action === 3 && notes.length > 2) await store.remove(note.id);
+      else if (action === 4) {
+        await store.addAttachment(note.id, {
+          name: `f${random(4)}.txt`,
+          data: text(`data ${step}`),
+        });
+      } else if (action === 5 && note.attachments[0]) {
+        await store.removeAttachment(note.id, note.attachments[0]);
+      }
+    });
+    await new Promise((resolve) => setTimeout(resolve, random(8)));
+  }
+  await turns;
+  for (let round = 0; round < 3; round++) {
+    for (const side of devices) await side.sync();
+  }
+
+  const expected = await contents(onServer);
+  for (const { dir, store } of devices) {
+    assert.deepEqual(await contents(dir), expected);
+    for (const note of await store.list()) {
+      for (const name of note.attachments) await store.readAttachment(name);
+    }
+  }
 });

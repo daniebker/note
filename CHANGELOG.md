@@ -6,8 +6,14 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.2.0-rc.1] - 2026-11-27
+
 ### Added
 
+- Offline use with a WebDAV server. A copy of notes and attachments is kept on
+  the device and synced in both directions, transferring only what changed.
+  Conflicting edits are merged or kept as a second note.
+- A sync button showing whether the device is up to date.
 - Attach images and files, up to 25 MB each, to new or existing notes. They're
   saved in an `attachments` folder inside the notes folder and listed in each
   note's frontmatter.
@@ -24,6 +30,8 @@ All notable changes to this project are documented here. The format is based on
 
 ### Changed
 
+- With a WebDAV server, the app reads and writes its copy on the device instead
+  of the server directly.
 - New installs suggest keeping notes on this device. Existing WebDAV settings
   carry over.
 
@@ -40,5 +48,6 @@ All notable changes to this project are documented here. The format is based on
 
 - **Breaking:** the web app, its accounts, public notes and server deployment.
 
-[Unreleased]: https://github.com/daniebker/note/compare/v0.1.0-rc.1...HEAD
+[Unreleased]: https://github.com/daniebker/note/compare/v0.2.0-rc.1...HEAD
+[0.2.0-rc.1]: https://github.com/daniebker/note/compare/v0.1.0-rc.1...v0.2.0-rc.1
 [0.1.0-rc.1]: https://github.com/daniebker/note/releases/tag/v0.1.0-rc.1

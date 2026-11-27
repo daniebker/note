@@ -22,7 +22,8 @@ On first start, choose where to keep your notes:
   a Git repository, a cloud drive's folder) to back it up or share it.
 - **WebDAV server**: the URL of the WebDAV folder and your credentials. The
   password is encrypted with the system keyring; without a keyring it isn't
-  saved and you're asked for it on each start.
+  saved and you're asked for it on each start. A copy of your notes is kept on
+  your computer, so they work [offline](#offline-and-syncing).
 
 You can switch at any time from Settings, between the two or to another folder
 or server. Your notes are copied to the new location. Tick "Remove them from
@@ -79,6 +80,40 @@ gh secret set ANDROID_KEY_PASSWORD        # the same password
 
 Don't commit the keystore.
 
+## Offline and syncing
+
+With a WebDAV server, the app keeps a copy of every note and attachment on the
+device and works from that, so you can read and edit without a connection.
+Changes are sent shortly after you make them. Changes from elsewhere are
+fetched when the app starts or regains focus, every minute while it's open, and
+when you press the sync button. Only files that changed are transferred. Syncing
+happens while the app is open: anything not yet sent goes the next time.
+
+When a note was changed both on this device and elsewhere since the last sync:
+
+- Changes to different parts, such as the text on one side and the color or an
+  attachment on the other, are merged. If both changed the color, pin or
+  archive state, this device's choice is kept.
+- If both changed the text or title, the server's version keeps the note and
+  yours is saved beside it, titled `<title> (conflicted copy)`.
+- An edit wins over a deletion.
+- Different files added under one name are both kept, one of them renamed.
+
+Two limits:
+
+- Plain WebDAV can't lock files. If two devices upload to the same file at the
+  same instant, the later upload replaces the earlier one.
+- If a server folder that held five or more files is suddenly empty, nothing is
+  deleted from the device and an error is shown. If you did mean to empty it,
+  disconnect and connect again.
+
+The copy isn't encrypted by the app. It's in the app's data folder on Linux
+(`~/.config/Note/mirrors`) and in private app storage on Android. Disconnecting,
+or switching elsewhere, deletes it once the server has everything. If you
+disconnect with changes still unsent, it's kept and they're sent when you
+connect to the same folder with the same username again. Switching to another
+location needs the old server to be reachable, so that nothing is left behind.
+
 ## Note files
 
 Each note is `<folder>/<name>.md`:
@@ -100,7 +135,7 @@ The note body.
 
 Markdown files added by other tools show up too; the frontmatter is optional and
 unknown fields are preserved. Changes made elsewhere are loaded when the window
-regains focus. Hidden files are ignored, as are subfolders other than
+regains focus (after syncing, for a WebDAV server). Hidden files are ignored, as are subfolders other than
 `attachments`.
 
 ### Attachments

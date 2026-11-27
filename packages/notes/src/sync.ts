@@ -186,6 +186,8 @@ export function createSync({
 
     // ---- Attachments ----
 
+    const failedUploads = new Set<string>();
+
     async function upload(name: string, expected: string | undefined) {
       const info = await local.attachments
         .list()
@@ -196,7 +198,12 @@ export function createSync({
         skipped = true;
         return;
       }
-      await remote.attachments.write(name, data);
+      try {
+        await remote.attachments.write(name, data);
+      } catch (error) {
+        failedUploads.add(name);
+        throw error;
+      }
       const written = await remote.attachments.stat(name);
       state.attachments.set(name, {
         remote: written?.version ?? "",
@@ -249,8 +256,10 @@ export function createSync({
         }
         // The server's file keeps the name, and ours gets a new one.
         const renamed = freeName(name, [
-          ...localFiles.keys(),
+          // Listed now, as files may have been added since the sync began.
+          ...(await local.attachments.list()).map((file) => file.name),
           ...remoteFiles.keys(),
+          ...state.attachments.keys(),
         ]);
         await local.attachments.write(renamed, ours);
         // Only notes edited here can mean our file by the old name.
@@ -311,6 +320,24 @@ export function createSync({
 
     // ---- Notes ----
 
+    // Whether a note lists a file that is still waiting to be uploaded, say
+    // because it was attached after this sync began.
+    async function awaitsUpload(name: string, text: string) {
+      const file = { id: name.slice(0, -3), modifiedAt: new Date(0) };
+      for (const attachment of parseNote(text, file).note.attachments) {
+        // One that has just failed shouldn't hold the writing back.
+        if (failedUploads.has(attachment)) continue;
+        const here = await local.attachments.stat(attachment);
+        if (
+          here &&
+          here.version !== state.attachments.get(attachment)?.local
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     /** Updates the local file, if it still contains `expected`. */
     async function apply(
       name: string,
@@ -336,7 +363,10 @@ export function createSync({
       text: string | null,
       expected: string | undefined,
     ) {
-      if ((await remote.stat(name))?.version !== expected) {
+      if (
+        (text !== null && (await awaitsUpload(name, text))) ||
+        (await remote.stat(name))?.version !== expected
+      ) {
         skipped = true;
         return;
       }
