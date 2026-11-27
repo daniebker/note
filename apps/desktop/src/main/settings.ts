@@ -1,4 +1,5 @@
 import { app, safeStorage } from "electron";
+import { mkdirSync } from "node:fs";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
@@ -26,6 +27,14 @@ export async function canSavePassword() {
     (process.platform !== "linux" ||
       safeStorage.getSelectedStorageBackend() !== "basic_text")
   );
+}
+
+/** The folder holding this computer's copy of a server's notes. */
+export function mirrorFolder(key: string) {
+  const root = path.join(app.getPath("userData"), "mirrors");
+  // Only for this user, as the notes may be private on the server.
+  mkdirSync(root, { recursive: true, mode: 0o700 });
+  return path.join(root, key);
 }
 
 /** The folder suggested for notes kept on this computer. */

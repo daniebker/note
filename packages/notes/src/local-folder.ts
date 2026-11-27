@@ -10,6 +10,7 @@ import {
   rename,
   rm,
   stat,
+  utimes,
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
@@ -71,16 +72,32 @@ export function createLocalFolder(folder: string): NoteFolder {
     }
   }
 
+  async function statFile(parent: string, name: string) {
+    const stats = await nullIfMissing(stat(path.join(parent, name)));
+    return stats?.isFile() ? fileInfo(name, stats) : null;
+  }
+
+  // Null if the folder doesn't exist.
+  async function listFiles(parent: string) {
+    const entries = await nullIfMissing(
+      readdir(parent, { withFileTypes: true }),
+    );
+    if (!entries) return null;
+    const files = await Promise.all(
+      entries
+        .filter((entry) => entry.isFile())
+        .map((entry) => statFile(parent, entry.name)),
+    );
+    return files.filter((file) => file !== null);
+  }
+
   return {
     attachments: {
       async list() {
-        const entries = await nullIfMissing(
-          readdir(attachments, { withFileTypes: true }),
-        );
-        return (entries ?? [])
-          .filter((entry) => entry.isFile())
-          .map((entry) => entry.name);
+        return (await listFiles(attachments)) ?? [];
       },
+
+      stat: (name) => statFile(attachments, name),
 
       async read(name) {
         const data = await nullIfMissing(readFile(attachmentPath(name)));
@@ -111,33 +128,21 @@ export function createLocalFolder(folder: string): NoteFolder {
     },
 
     async list() {
-      const entries = await nullIfMissing(
-        readdir(folder, { withFileTypes: true }),
-      );
-      if (!entries) throw new FolderNotFoundError();
-      const files = await Promise.all(
-        entries
-          .filter((entry) => entry.isFile())
-          .map(async (entry) => {
-            const stats = await nullIfMissing(stat(filePath(entry.name)));
-            return stats ? fileInfo(entry.name, stats) : null;
-          }),
-      );
-      return files.filter((file) => file !== null);
+      const files = await listFiles(folder);
+      if (!files) throw new FolderNotFoundError();
+      return files;
     },
 
-    async stat(name) {
-      const stats = await nullIfMissing(stat(filePath(name)));
-      return stats?.isFile() ? fileInfo(name, stats) : null;
-    },
+    stat: (name) => statFile(folder, name),
 
     read(name) {
       return nullIfMissing(readFile(filePath(name), "utf8"));
     },
 
-    async write(name, contents) {
+    async write(name, contents, modifiedAt) {
       await requireFolder();
       await replaceFile(filePath(name), contents);
+      if (modifiedAt) await utimes(filePath(name), modifiedAt, modifiedAt);
     },
 
     async remove(name) {

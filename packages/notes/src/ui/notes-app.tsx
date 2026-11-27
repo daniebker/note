@@ -2,10 +2,12 @@ import { useMemo, useState } from "react";
 import { Composer } from "./composer";
 import { EditModal } from "./edit-modal";
 import { NoteCard } from "./note-card";
-import { PenIcon, SearchIcon } from "./icons";
+import { PenIcon, SearchIcon, SyncIcon } from "./icons";
 import { ThemeToggle } from "./theme-toggle";
 import { extractTags } from "./tags";
 import { useNotes } from "./use-notes";
+import { useSync } from "./use-sync";
+import type { SyncStatus } from "../api";
 import { saveAll } from "./flush";
 import type { Note } from "./note-types";
 
@@ -31,7 +33,10 @@ export function NotesApp({
     addAttachments,
     removeAttachment,
     retry,
+    refresh,
   } = useNotes();
+  const { status: sync, syncNow } = useSync(refresh);
+  const neverSynced = sync !== null && sync.lastSynced === null;
   const notes = useMemo(() => loaded ?? [], [loaded]);
   const [query, setQuery] = useState("");
   // A copy, so the editor stays open if the file disappears during a refresh.
@@ -119,6 +124,21 @@ export function NotesApp({
           />
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+          {sync && (
+            <button
+              aria-label="Sync now"
+              className={`rounded-full p-2 hover:bg-ink/10 ${
+                sync.error ? "text-danger" : "text-ink-muted"
+              }`}
+              onClick={syncNow}
+              title={describeSync(sync)}
+              type="button"
+            >
+              <SyncIcon
+                className={`h-5 w-5 ${sync.syncing ? "animate-spin [animation-direction:reverse]" : ""}`}
+              />
+            </button>
+          )}
           <ThemeToggle />
           <button
             className="rounded-md px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
@@ -145,6 +165,15 @@ export function NotesApp({
               {unsaved > 0 ? "Retry saving" : "Retry"}
             </button>
           </div>
+        )}
+
+        {sync?.error && (
+          <p
+            className="mx-auto mb-4 max-w-xl text-center text-xs text-danger"
+            role="status"
+          >
+            Not synced: {sync.error}. Changes are saved on this device.
+          </p>
         )}
 
         {notice && (
@@ -193,9 +222,13 @@ export function NotesApp({
           </p>
         ) : filtered.length === 0 ? (
           <p className="mt-16 text-center text-sm text-ink-muted">
-            {notes.length === 0
-              ? "Notes you add appear here"
-              : "No matching notes"}
+            {notes.length > 0
+              ? "No matching notes"
+              : neverSynced && sync.syncing
+                ? "Syncing your notes…"
+                : neverSynced && sync.error
+                  ? "Notes from the server haven't been downloaded yet"
+                  : "Notes you add appear here"}
           </p>
         ) : pinned.length > 0 ? (
           <>
@@ -234,4 +267,11 @@ export function NotesApp({
       )}
     </div>
   );
+}
+
+function describeSync({ syncing, error, lastSynced }: SyncStatus) {
+  if (syncing) return "Syncing…";
+  if (error) return `Not synced: ${error}`;
+  if (!lastSynced) return "Not synced yet";
+  return `Synced ${new Date(lastSynced).toLocaleString()}`;
 }

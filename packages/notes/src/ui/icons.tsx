@@ -109,3 +109,11 @@ export function FileIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function SyncIcon({ className }: IconProps) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 4V1L8 5l4 4V6a6 6 0 0 1 5.24 8.92l1.46 1.46A8 8 0 0 0 12 4Zm0 14a6 6 0 0 1-5.24-8.92L5.3 7.62A8 8 0 0 0 12 20v3l4-4-4-4v3Z" />
+    </svg>
+  );
+}

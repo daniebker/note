@@ -112,6 +112,11 @@ final class LocalFolder {
         }
     }
 
+    /** Best effort: not every filesystem allows it. */
+    void setModified(String name, long millis) {
+        file(name).setLastModified(millis);
+    }
+
     /** Removing a file that is already gone is not an error. */
     void remove(String name) throws IOException {
         File file = file(name);

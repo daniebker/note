@@ -10,20 +10,21 @@ export function useNotes() {
   const failed = useRef(new Map<string, NoteInput>());
   const inFlight = useRef(new Set<Promise<unknown>>());
   const writes = useRef(0);
-
-  function track<T>(promise: Promise<T>): Promise<T> {
-    writes.current++;
-    inFlight.current.add(promise);
-    void promise.finally(() => inFlight.current.delete(promise));
-    return promise;
-  }
+  // Set when a refresh had to be skipped, to do it once saving is over.
+  const stale = useRef(false);
 
   const refresh = useCallback(async () => {
     const before = writes.current;
     // A list read while a save is under way could be out of date.
-    if (inFlight.current.size > 0) return;
+    if (inFlight.current.size > 0) {
+      stale.current = true;
+      return;
+    }
     const result = await window.noteApi.listNotes();
-    if (writes.current !== before) return;
+    if (writes.current !== before) {
+      stale.current = true;
+      return;
+    }
     if (!result.ok) {
       setError(result.error);
       return;
@@ -33,6 +34,19 @@ export function useNotes() {
     );
     if (failed.current.size === 0) setError(null);
   }, []);
+
+  function track<T>(promise: Promise<T>): Promise<T> {
+    writes.current++;
+    inFlight.current.add(promise);
+    void promise.finally(() => {
+      inFlight.current.delete(promise);
+      if (inFlight.current.size === 0 && stale.current) {
+        stale.current = false;
+        void refresh();
+      }
+    });
+    return promise;
+  }
 
   useEffect(() => {
     void refresh();
@@ -172,5 +186,6 @@ export function useNotes() {
     addAttachments,
     removeAttachment,
     retry,
+    refresh,
   };
 }

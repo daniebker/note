@@ -14,6 +14,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -143,10 +144,22 @@ public class NotePlugin extends Plugin {
         call.resolve(data);
     }
 
+    /** The folder a call is about: local notes, or a copy of a server's. */
+    private LocalFolder folder(PluginCall call) {
+        String mirror = call.getString("mirror");
+        if (mirror == null) return local;
+        // Names come from the WebView, so only the expected form is accepted.
+        if (!mirror.matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException("Invalid folder");
+        }
+        // Internal storage, which other apps and USB can't read.
+        return new LocalFolder(new File(getContext().getFilesDir(), "mirrors/" + mirror));
+    }
+
     @PluginMethod
     public void localPrepare(PluginCall call) {
         try {
-            local.prepare();
+            folder(call).prepare();
             call.resolve();
         } catch (Exception e) {
             call.reject(e.getMessage(), e);
@@ -155,25 +168,37 @@ public class NotePlugin extends Plugin {
 
     @PluginMethod
     public void localList(PluginCall call) {
-        List<LocalFolder.Entry> entries = local.list();
-        if (entries == null) {
-            call.reject("The notes folder was not found", "NOT_FOUND");
-            return;
+        try {
+            List<LocalFolder.Entry> entries = folder(call).list();
+            if (entries == null) {
+                call.reject("The notes folder was not found", "NOT_FOUND");
+                return;
+            }
+            call.resolve(files(entries));
+        } catch (Exception e) {
+            call.reject(e.getMessage(), e);
         }
+    }
+
+    private static JSObject files(List<LocalFolder.Entry> entries) {
         JSArray files = new JSArray();
         for (LocalFolder.Entry entry : entries) files.put(entry(entry));
         JSObject data = new JSObject();
         data.put("files", files);
+        return data;
+    }
+
+    private static void stat(PluginCall call, LocalFolder folder) {
+        LocalFolder.Entry entry = folder.stat(call.getString("name"));
+        JSObject data = new JSObject();
+        if (entry != null) data.put("file", entry(entry));
         call.resolve(data);
     }
 
     @PluginMethod
     public void localStat(PluginCall call) {
         try {
-            LocalFolder.Entry entry = local.stat(call.getString("name"));
-            JSObject data = new JSObject();
-            if (entry != null) data.put("file", entry(entry));
-            call.resolve(data);
+            stat(call, folder(call));
         } catch (Exception e) {
             call.reject(e.getMessage(), e);
         }
@@ -182,7 +207,7 @@ public class NotePlugin extends Plugin {
     @PluginMethod
     public void localRead(PluginCall call) {
         try {
-            String value = local.read(call.getString("name"));
+            String value = folder(call).read(call.getString("name"));
             JSObject data = new JSObject();
             if (value != null) data.put("value", value);
             call.resolve(data);
@@ -199,7 +224,11 @@ public class NotePlugin extends Plugin {
             return;
         }
         try {
-            local.write(call.getString("name"), value);
+            LocalFolder folder = folder(call);
+            String name = call.getString("name");
+            folder.write(name, value);
+            long modified = call.getData().optLong("modified", 0);
+            if (modified > 0) folder.setModified(name, modified);
             call.resolve();
         } catch (Exception e) {
             call.reject(e.getMessage(), e);
@@ -209,7 +238,7 @@ public class NotePlugin extends Plugin {
     @PluginMethod
     public void localRemove(PluginCall call) {
         try {
-            local.remove(call.getString("name"));
+            folder(call).remove(call.getString("name"));
             call.resolve();
         } catch (Exception e) {
             call.reject(e.getMessage(), e);
@@ -218,20 +247,27 @@ public class NotePlugin extends Plugin {
 
     @PluginMethod
     public void attachmentList(PluginCall call) {
-        List<LocalFolder.Entry> entries = local.attachments().list();
-        JSArray names = new JSArray();
-        if (entries != null) {
-            for (LocalFolder.Entry entry : entries) names.put(entry.name);
+        try {
+            List<LocalFolder.Entry> entries = folder(call).attachments().list();
+            call.resolve(files(entries == null ? new ArrayList<>() : entries));
+        } catch (Exception e) {
+            call.reject(e.getMessage(), e);
         }
-        JSObject data = new JSObject();
-        data.put("names", names);
-        call.resolve(data);
+    }
+
+    @PluginMethod
+    public void attachmentStat(PluginCall call) {
+        try {
+            stat(call, folder(call).attachments());
+        } catch (Exception e) {
+            call.reject(e.getMessage(), e);
+        }
     }
 
     @PluginMethod
     public void attachmentRead(PluginCall call) {
         try {
-            byte[] contents = local.attachments().readBytes(call.getString("name"));
+            byte[] contents = folder(call).attachments().readBytes(call.getString("name"));
             JSObject data = new JSObject();
             if (contents != null) data.put("data", Base64.encodeToString(contents, Base64.NO_WRAP));
             call.resolve(data);
@@ -248,7 +284,7 @@ public class NotePlugin extends Plugin {
             return;
         }
         try {
-            LocalFolder attachments = local.attachments();
+            LocalFolder attachments = folder(call).attachments();
             attachments.create();
             attachments.write(call.getString("name"), Base64.decode(value, Base64.NO_WRAP));
             call.resolve();
@@ -260,7 +296,7 @@ public class NotePlugin extends Plugin {
     @PluginMethod
     public void attachmentRemove(PluginCall call) {
         try {
-            local.attachments().remove(call.getString("name"));
+            folder(call).attachments().remove(call.getString("name"));
             call.resolve();
         } catch (Exception e) {
             call.reject(e.getMessage(), e);

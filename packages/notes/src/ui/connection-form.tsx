@@ -136,6 +136,9 @@ export function ConnectionForm({
             </>
           ) : (
             <>
+              <p className="text-sm text-ink-muted">
+                A copy is kept on this device, so your notes also work offline.
+              </p>
               <input
                 aria-label="Folder URL"
                 className={inputClass}

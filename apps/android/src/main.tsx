@@ -23,6 +23,7 @@ const service = createNoteService(createSettingsStorage(Native), {
   open: () => createLocalFolder(Native),
   defaultPath: async () => (await Native.localPath()).path,
   canChooseFolder: false,
+  openMirror: (key) => createLocalFolder(Native, key),
 });
 
 window.noteApi = {

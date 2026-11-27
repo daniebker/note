@@ -7,6 +7,7 @@ import {
   clearSettings,
   defaultNotesFolder,
   loadSettings,
+  mirrorFolder,
   saveSettings,
 } from "./settings";
 
@@ -22,8 +23,15 @@ export function registerIpc() {
       open: createLocalFolder,
       defaultPath: async () => defaultNotesFolder(),
       canChooseFolder: true,
+      openMirror: (key) => createLocalFolder(mirrorFolder(key)),
     },
   );
+
+  service.onSyncStatus((status) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      window.webContents.send("sync:status", status);
+    }
+  });
 
   // The service validates its input, as it comes from the renderer.
   ipcMain.handle("connection:get", () => service.getConnection());
@@ -43,6 +51,8 @@ export function registerIpc() {
       : await dialog.showOpenDialog(options);
     return canceled ? null : (filePaths[0] ?? null);
   });
+  ipcMain.handle("sync:get", () => service.getSyncStatus());
+  ipcMain.handle("sync:run", () => service.sync());
   ipcMain.handle("notes:list", () => service.listNotes());
   ipcMain.handle("notes:create", (_event, data) => service.createNote(data));
   ipcMain.handle("notes:update", (_event, id, changes) =>

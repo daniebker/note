@@ -46,10 +46,9 @@ function sameBytes(a: Uint8Array, b: Uint8Array) {
 
 // One file at a time, as they can be large.
 async function copyAttachments(from: NoteFolder, to: NoteFolder) {
-  const [sources, targets] = await Promise.all([
-    from.attachments.list(),
-    to.attachments.list(),
-  ]);
+  const names = async (folder: NoteFolder) =>
+    (await folder.attachments.list()).map((file) => file.name);
+  const [sources, targets] = await Promise.all([names(from), names(to)]);
   const taken = new Set(targets);
   // Files saved under a different name in `to`.
   const renames = new Map<string, string>();

@@ -51,6 +51,17 @@ export type ConnectResult = SavedConnection & {
   copy?: NoteCopy | null;
 };
 
+/** Progress keeping this device's copy and a server's the same. */
+export type SyncStatus = {
+  syncing: boolean;
+  /** Why the last sync failed, if it did. */
+  error: string | null;
+  /** When everything was last in step; null if it never has been. */
+  lastSynced: string | null;
+  /** Goes up whenever syncing changes the notes on this device. */
+  revision: number;
+};
+
 /** Errors are returned as values to keep their messages intact over IPC. */
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -80,6 +91,11 @@ export type NoteApi = {
   readAttachment(name: string): Promise<Result<Uint8Array>>;
   /** Opens a file in another app, where downloading it isn't possible. */
   openAttachment?(name: string): Promise<Result<null>>;
+  /** Null when the notes are only on this device. */
+  getSyncStatus(): Promise<Result<SyncStatus | null>>;
+  /** Syncs now, resolving once it has finished or failed. */
+  sync(): Promise<Result<SyncStatus | null>>;
+  onSyncStatus(handler: (status: SyncStatus | null) => void): () => void;
   /** `handler` saves any drafts and resolves true if nothing would be lost. */
   onBeforeClose(handler: () => Promise<boolean>): () => void;
 };

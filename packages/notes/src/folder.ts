@@ -11,8 +11,10 @@ export type FileInfo = {
 
 /** The folder of attached files. It is only created once there is a file. */
 export type AttachmentFolder = {
-  /** The names of the files in it; none if it doesn't exist. */
-  list(): Promise<string[]>;
+  /** The files in it; none if it doesn't exist. */
+  list(): Promise<FileInfo[]>;
+  /** Null if the file doesn't exist. */
+  stat(name: string): Promise<FileInfo | null>;
   /** Null if the file doesn't exist. */
   read(name: string): Promise<Uint8Array | null>;
   /** Creates the folder if needed, but not the notes folder around it. */
@@ -34,7 +36,8 @@ export type NoteFolder = {
   stat(name: string): Promise<FileInfo | null>;
   /** Null if the file doesn't exist. */
   read(name: string): Promise<string | null>;
-  write(name: string, contents: string): Promise<void>;
+  /** `modifiedAt` is kept where the storage allows setting it. */
+  write(name: string, contents: string, modifiedAt?: Date): Promise<void>;
   /** Removing a file that is already gone is not an error. */
   remove(name: string): Promise<void>;
 };

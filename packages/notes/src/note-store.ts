@@ -88,7 +88,7 @@ export function createNoteStore(folder: NoteFolder) {
   function saveFile({ name, data }: NewAttachment): Promise<string> {
     // A key that can't be a note's id.
     return withLock("/attachments", async () => {
-      const taken = await folder.attachments.list();
+      const taken = (await folder.attachments.list()).map((file) => file.name);
       const free = freeName(safeFileName(name), taken);
       await folder.attachments.write(free, data);
       return free;

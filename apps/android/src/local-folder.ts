@@ -10,27 +10,37 @@ function fileInfo({ name, modified, size }: LocalFile) {
   };
 }
 
-/** The notes folder in the app's own storage, reached through native code. */
-export function createLocalFolder(native: NotePlugin): NoteFolder {
+/**
+ * A notes folder in the app's own storage, reached through native code: the
+ * one for notes kept on the device, or the copy of a server's named `mirror`.
+ */
+export function createLocalFolder(
+  native: NotePlugin,
+  mirror?: string,
+): NoteFolder {
   return {
     attachments: {
       async list() {
-        return (await native.attachmentList()).names;
+        return (await native.attachmentList({ mirror })).files.map(fileInfo);
+      },
+      async stat(name) {
+        const { file } = await native.attachmentStat({ mirror, name });
+        return file ? fileInfo(file) : null;
       },
       async read(name) {
-        const { data } = await native.attachmentRead({ name });
+        const { data } = await native.attachmentRead({ mirror, name });
         return data === undefined ? null : fromBase64(data);
       },
       write: (name, data) =>
-        native.attachmentWrite({ name, data: toBase64(data) }),
-      remove: (name) => native.attachmentRemove({ name }),
+        native.attachmentWrite({ mirror, name, data: toBase64(data) }),
+      remove: (name) => native.attachmentRemove({ mirror, name }),
     },
 
-    prepare: () => native.localPrepare(),
+    prepare: () => native.localPrepare({ mirror }),
 
     async list() {
       try {
-        const { files } = await native.localList();
+        const { files } = await native.localList({ mirror });
         return files.map(fileInfo);
       } catch (error) {
         if ((error as { code?: string } | null)?.code === "NOT_FOUND") {
@@ -41,16 +51,22 @@ export function createLocalFolder(native: NotePlugin): NoteFolder {
     },
 
     async stat(name) {
-      const { file } = await native.localStat({ name });
+      const { file } = await native.localStat({ mirror, name });
       return file ? fileInfo(file) : null;
     },
 
     async read(name) {
-      const { value } = await native.localRead({ name });
+      const { value } = await native.localRead({ mirror, name });
       return value ?? null;
     },
 
-    write: (name, value) => native.localWrite({ name, value }),
-    remove: (name) => native.localRemove({ name }),
+    write: (name, value, modifiedAt) =>
+      native.localWrite({
+        mirror,
+        name,
+        value,
+        modified: modifiedAt?.getTime(),
+      }),
+    remove: (name) => native.localRemove({ mirror, name }),
   };
 }

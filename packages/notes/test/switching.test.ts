@@ -122,11 +122,17 @@ function memorySettings(initial: StoredConnection | null = null) {
   };
 }
 
+// Each service stands for a different device, with its own copies.
+let services = 0;
+
 function serviceWith(settings = memorySettings()): NoteService {
+  const device = String(++services);
   return createNoteService(settings, {
     open: createLocalFolder,
     defaultPath: async () => path.join(root, "default"),
     canChooseFolder: true,
+    openMirror: (key) =>
+      createLocalFolder(path.join(root, "mirrors", device, key)),
   });
 }
 
@@ -153,6 +159,7 @@ test("switching between local and WebDAV takes the notes along", async () => {
     renamed: 0,
     removed: 0,
   });
+  ok(await service.sync());
   assert.deepEqual(ok(await service.listNotes()), [note]);
 
   // Back again: the local copy is already there and identical.

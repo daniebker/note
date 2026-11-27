@@ -16,6 +16,14 @@ const api: NoteApi = {
   removeAttachment: (id, name) =>
     ipcRenderer.invoke("attachments:remove", id, name),
   readAttachment: (name) => ipcRenderer.invoke("attachments:read", name),
+  getSyncStatus: () => ipcRenderer.invoke("sync:get"),
+  sync: () => ipcRenderer.invoke("sync:run"),
+  onSyncStatus(handler) {
+    const listener = (_event: unknown, status: Parameters<typeof handler>[0]) =>
+      handler(status);
+    ipcRenderer.on("sync:status", listener);
+    return () => ipcRenderer.removeListener("sync:status", listener);
+  },
   onBeforeClose(handler) {
     const listener = async () => {
       const saved = await handler().catch(() => false);
