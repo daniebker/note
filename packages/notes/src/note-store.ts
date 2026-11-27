@@ -1,100 +1,43 @@
-// Notes are markdown files in one WebDAV folder: `<url>/<noteId>.md`.
-import { createClient, type FileStat } from "webdav";
-import type { Connection } from "./api";
+// Notes are markdown files in one folder: `<folder>/<noteId>.md`.
 import type { Note, NoteInput } from "./note";
+import type { FileInfo, NoteFolder } from "./folder";
 import { type Frontmatter, parseNote, serializeNote } from "./markdown.ts";
 
 type StoredNote = { note: Note; extra: Frontmatter };
 
-const MAX_CONCURRENT_REQUESTS = 8;
-
 // Ids are file names, so anything that could leave the folder is rejected.
 // Hidden files (editor swap files and the like) are ignored.
-function isValidId(id: string) {
+export function isValidId(id: string) {
   return id !== "" && !id.startsWith(".") && !/[/\\\0]/.test(id);
 }
 
-function isNotFound(error: unknown) {
-  return (error as { status?: number } | null)?.status === 404;
-}
+const fileName = (id: string) => `${id}.md`;
 
-async function nullIfNotFound<T>(promise: Promise<T>): Promise<T | null> {
-  try {
-    return await promise;
-  } catch (error) {
-    if (isNotFound(error)) return null;
-    throw error;
-  }
-}
-
-export function createNoteStore({ url, username, password }: Connection) {
-  // The client is rooted at the server so that `prepare` can create the notes
-  // folder itself.
-  const { origin, pathname } = new URL(url);
-  const dav = createClient(origin, {
-    username: username || undefined,
-    password: password || undefined,
-  });
-  const folder = pathname.split("/").map(decodeURIComponent).join("/");
-  const root = folder.replace(/\/+$/, "");
-  const notePath = (id: string) => `${root}/${id}.md`;
-
-  let activeRequests = 0;
-  const waiting: (() => void)[] = [];
-
-  async function request<T>(run: () => Promise<T>): Promise<T> {
-    if (activeRequests >= MAX_CONCURRENT_REQUESTS) {
-      // The finishing request hands its slot straight to us.
-      await new Promise<void>((resolve) => waiting.push(resolve));
-    } else {
-      activeRequests++;
-    }
-    try {
-      return await run();
-    } finally {
-      const next = waiting.shift();
-      if (next) next();
-      else activeRequests--;
-    }
-  }
-
-  // Parsed files, so listing only downloads what changed since the last read.
+export function createNoteStore(folder: NoteFolder) {
+  // Parsed files, so listing only reads what changed since the last read.
   const cache = new Map<string, { version: string; stored: StoredNote }>();
 
-  async function load(id: string, stat: FileStat): Promise<StoredNote | null> {
-    const path = notePath(id);
-    const version = `${stat.etag}|${stat.lastmod}|${stat.size}`;
-    const cached = cache.get(path);
-    if (cached?.version === version) return cached.stored;
+  async function load(id: string, file: FileInfo): Promise<StoredNote | null> {
+    const cached = cache.get(id);
+    if (cached?.version === file.version) return cached.stored;
 
-    const source = await nullIfNotFound(
-      request(() => dav.getFileContents(path, { format: "text" })),
-    );
+    const source = await folder.read(fileName(id));
     if (source === null) return null;
 
-    const stored = parseNote(source as string, {
-      id,
-      modifiedAt: new Date(stat.lastmod),
-    });
-    cache.set(path, { version, stored });
+    const stored = parseNote(source, { id, modifiedAt: file.modifiedAt });
+    cache.set(id, { version: file.version, stored });
     return stored;
   }
 
   async function read(id: string): Promise<StoredNote | null> {
     if (!isValidId(id)) return null;
-    const stat = await nullIfNotFound(
-      request(() => dav.stat(notePath(id)) as Promise<FileStat>),
-    );
-    return stat ? load(id, stat) : null;
+    const file = await folder.stat(fileName(id));
+    return file ? load(id, file) : null;
   }
 
   async function write({ note, extra }: StoredNote): Promise<void> {
-    const path = notePath(note.id);
-    const written = await request(() =>
-      dav.putFileContents(path, serializeNote(note, extra)),
-    );
-    cache.delete(path);
-    if (!written) throw new Error(`Failed to write ${path}`);
+    cache.delete(note.id);
+    await folder.write(fileName(note.id), serializeNote(note, extra));
   }
 
   // Runs changes to one note one at a time, so that two quick edits (say,
@@ -113,29 +56,17 @@ export function createNoteStore({ url, username, password }: Connection) {
   }
 
   return {
-    /**
-     * Checks the folder is reachable, creating it if it doesn't exist. Its
-     * parent folder must already be there.
-     */
-    async prepare() {
-      if (!(await dav.exists(root || "/"))) await dav.createDirectory(root);
-      await dav.getDirectoryContents(root || "/");
-    },
+    prepare: () => folder.prepare(),
 
     // A missing folder is an error here, not an empty list: showing no notes
     // would look like they had been lost.
     async list(): Promise<Note[]> {
-      const entries = await request(
-        () => dav.getDirectoryContents(root || "/") as Promise<FileStat[]>,
-      );
+      const files = await folder.list();
       const loaded = await Promise.all(
-        entries.map((entry) => {
-          const id = entry.basename.replace(/\.md$/, "");
-          const isNote =
-            entry.type === "file" &&
-            entry.basename.endsWith(".md") &&
-            isValidId(id);
-          return isNote ? load(id, entry) : null;
+        files.map((file) => {
+          const id = file.name.replace(/\.md$/, "");
+          const isNote = file.name.endsWith(".md") && isValidId(id);
+          return isNote ? load(id, file) : null;
         }),
       );
       return loaded
@@ -183,8 +114,8 @@ export function createNoteStore({ url, username, password }: Connection) {
     remove(id: string): Promise<void> {
       return withLock(id, async () => {
         if (!isValidId(id)) throw new Error("Invalid note id");
-        await nullIfNotFound(request(() => dav.deleteFile(notePath(id))));
-        cache.delete(notePath(id));
+        await folder.remove(fileName(id));
+        cache.delete(id);
       });
     },
   };

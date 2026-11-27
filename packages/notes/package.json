@@ -6,6 +6,8 @@
   "exports": {
     "./api": "./src/api.ts",
     "./service": "./src/service.ts",
+    "./local-folder": "./src/local-folder.ts",
+    "./folder": "./src/folder.ts",
     "./theme": "./src/theme.ts",
     "./window": "./src/window.d.ts",
     "./styles.css": "./src/styles.css",

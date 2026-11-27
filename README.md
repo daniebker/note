@@ -1,7 +1,8 @@
 # Note
 
 A Google Keep–style markdown note taking app for the Linux desktop and Android.
-Notes are plain markdown files in a folder on a WebDAV server.
+Notes are plain markdown files in a folder, either on this device or on a
+WebDAV server so they sync between devices.
 
 ## Linux
 
@@ -14,9 +15,23 @@ chmod +x apps/desktop/release/Note-*.AppImage
 ./apps/desktop/release/Note-*.AppImage
 ```
 
-On first start, enter the URL of the WebDAV folder for your notes and your
-credentials. The password is encrypted with the system keyring; without a
-keyring it isn't saved and you're asked for it on each start.
+On first start, choose where to keep your notes:
+
+- **This device**: a folder on your computer, `~/Documents/Notes` unless you
+  pick another. Nothing is synced, so you can use any tool you like (Syncthing,
+  a Git repository, a cloud drive's folder) to back it up or share it.
+- **WebDAV server**: the URL of the WebDAV folder and your credentials. The
+  password is encrypted with the system keyring; without a keyring it isn't
+  saved and you're asked for it on each start.
+
+You can switch at any time from Settings, between the two or to another folder
+or server. Your notes are copied to the new location. Tick "Remove them from
+the old location" to move them instead: they're deleted there only once every
+note has been copied, and never if the two locations turn out to be the same
+folder. A note that is already there is skipped if it's the
+same, and kept alongside as `<name> (2).md` if it differs, so nothing is
+overwritten. If the old location can't be read (say, the server is down),
+the switch is cancelled; disconnect first to switch without your notes.
 
 ## Android
 
@@ -28,6 +43,10 @@ npm install
 npm run apk
 adb install apps/android/android/app/build/outputs/apk/debug/app-debug.apk
 ```
+
+Notes kept on the device are stored in the app's own storage, in
+`Android/data/io.github.daniebker.note/files/notes`, where you can reach them
+over USB. Android deletes this folder when the app is uninstalled.
 
 This is a debug build, signed with a key specific to the machine that built it,
 so a build from elsewhere (including CI) can't update it in place. The password
@@ -101,14 +120,16 @@ Copy the web app's SQLite database to your machine, then export its notes
 node apps/desktop/scripts/export-legacy-notes.mjs note.db exported-notes
 ```
 
-This writes one folder per user. Upload the contents of yours to the WebDAV
-folder.
+This writes one folder per user. Copy the contents of yours to your notes
+folder, or upload them to the WebDAV folder.
 
 ## Layout
 
 - `apps/desktop`: the Electron app
 - `apps/android`: the Capacitor app and its native Java code
-- `packages/notes`: the UI and note storage both apps share
+- `packages/notes`: the UI and note storage both apps share (the WebDAV and
+  desktop folders; Android's is in `apps/android/src/local-folder.ts` and
+  `LocalFolder.java`)
 - `apps/docs`: Next.js starter app
 - `packages/*`: shared UI, ESLint, Tailwind and TypeScript config
 

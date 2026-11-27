@@ -8,6 +8,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { getPatcher } from "webdav";
 import { createNoteStore } from "../../../packages/notes/src/note-store.ts";
+import { createWebdavFolder } from "../../../packages/notes/src/webdav-folder.ts";
 import { createNativeFetch } from "../src/native-fetch.ts";
 
 const ADDRESS = "127.0.0.1:18092";
@@ -46,11 +47,13 @@ test("the note store works through the native fetch adapter", async (t) => {
     }),
   );
 
-  const store = createNoteStore({
-    url: `http://${ADDRESS}/notes`,
-    username: "u",
-    password: "p",
-  });
+  const store = createNoteStore(
+    createWebdavFolder({
+      url: `http://${ADDRESS}/notes`,
+      username: "u",
+      password: "p",
+    }),
+  );
   await store.prepare();
   const note = await store.create({ title: "Phone", content: "ünï 🎉" });
   assert.deepEqual(await store.list(), [note]);

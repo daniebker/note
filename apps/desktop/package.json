@@ -2,7 +2,7 @@
   "name": "note-desktop",
   "productName": "Note",
   "version": "1.0.0",
-  "description": "A Google Keep\u2013style markdown note taking app, backed by WebDAV",
+  "description": "A Google Keep\u2013style markdown note taking app, backed by a local folder or WebDAV",
   "author": "Daniel Baker",
   "private": true,
   "type": "module",
