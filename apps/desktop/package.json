@@ -1,0 +1,59 @@
+{
+  "name": "note-desktop",
+  "productName": "Note",
+  "version": "1.0.0",
+  "description": "A Google Keep\u2013style markdown note taking app, backed by WebDAV",
+  "author": "Daniel Baker",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.cjs",
+  "desktopName": "note.desktop",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --linux AppImage --publish never",
+    "lint": "eslint --max-warnings 0",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "*",
+    "@repo/notes": "*",
+    "@repo/tailwind-config": "*",
+    "@repo/typescript-config": "*",
+    "@tailwindcss/cli": "^4.3.5",
+    "@types/node": "^22.15.30",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.1",
+    "electron": "45.5.0",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.1.5",
+    "typescript": "5.9.2",
+    "yaml": "^2.9.1"
+  },
+  "build": {
+    "appId": "io.github.daniebker.note",
+    "productName": "Note",
+    "electronVersion": "45.5.0",
+    "files": [
+      "dist/**",
+      "package.json",
+      "!**/node_modules/**"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Utility",
+      "executableName": "note",
+      "syncDesktopName": true,
+      "artifactName": "Note-${version}-${arch}.${ext}",
+      "icon": "assets/icon.png"
+    }
+  }
+}

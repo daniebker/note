@@ -34,3 +34,10 @@ yarn-error.log*
 
 # ui
 dist/
+
+# local webdav storage
+webdav-data/
+
+# signing keys
+*.keystore
+*.jks
