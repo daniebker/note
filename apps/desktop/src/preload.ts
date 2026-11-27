@@ -5,6 +5,8 @@ const api: NoteApi = {
   getConnection: () => ipcRenderer.invoke("connection:get"),
   connect: (connection) => ipcRenderer.invoke("connection:set", connection),
   disconnect: () => ipcRenderer.invoke("connection:clear"),
+  chooseFolder: (current) =>
+    ipcRenderer.invoke("connection:choose-folder", current),
   listNotes: () => ipcRenderer.invoke("notes:list"),
   createNote: (data) => ipcRenderer.invoke("notes:create", data),
   updateNote: (id, changes) => ipcRenderer.invoke("notes:update", id, changes),

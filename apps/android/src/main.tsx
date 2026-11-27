@@ -9,6 +9,7 @@ import { applySavedTheme } from "@repo/notes/theme";
 import { App } from "@repo/notes/ui/app";
 import { Native } from "./native";
 import { createNativeFetch } from "./native-fetch";
+import { createLocalFolder } from "./local-folder";
 import { createSettingsStorage } from "./settings";
 
 getPatcher().patch(
@@ -17,7 +18,12 @@ getPatcher().patch(
 );
 
 window.noteApi = {
-  ...createNoteService(createSettingsStorage(Native)),
+  ...createNoteService(createSettingsStorage(Native), {
+    // Notes always go in the app's own storage.
+    open: () => createLocalFolder(Native),
+    defaultPath: async () => (await Native.localPath()).path,
+    canChooseFolder: false,
+  }),
   // Android may kill a backgrounded app without warning, so drafts are saved
   // as soon as it leaves the foreground.
   onBeforeClose(handler) {
