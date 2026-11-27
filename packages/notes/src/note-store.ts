@@ -7,7 +7,7 @@ type StoredNote = { note: Note; extra: Frontmatter };
 
 // Ids are file names, so anything that could leave the folder is rejected.
 // Hidden files (editor swap files and the like) are ignored.
-function isValidId(id: string) {
+export function isValidId(id: string) {
   return id !== "" && !id.startsWith(".") && !/[/\\\0]/.test(id);
 }
 

@@ -29,12 +29,31 @@ export type SavedConnection = {
   canChooseFolder: boolean;
 };
 
+/** Notes copied from the previous location when the location changes. */
+export type NoteCopy = {
+  copied: number;
+  /** Notes saved under a new name, as a different file had theirs. */
+  renamed: number;
+};
+
+export type ConnectResult = SavedConnection & {
+  /**
+   * Set when the notes location changed. Null if there were notes elsewhere
+   * that couldn't be copied, because the old location wasn't connected.
+   */
+  copy?: NoteCopy | null;
+};
+
 /** Errors are returned as values to keep their messages intact over IPC. */
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export type NoteApi = {
   getConnection(): Promise<Result<SavedConnection>>;
-  connect(connection: Connection): Promise<Result<SavedConnection>>;
+  /**
+   * Switches to `connection`, first copying the notes from the current
+   * location if it is a different one. The old copies are left in place.
+   */
+  connect(connection: Connection): Promise<Result<ConnectResult>>;
   disconnect(): Promise<Result<null>>;
   /** Asks for a local notes folder; null if the user cancelled. */
   chooseFolder?(current: string): Promise<string | null>;

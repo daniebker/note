@@ -1,5 +1,10 @@
 import { useState, type FormEvent } from "react";
-import type { Connection, SavedConnection, StorageType } from "../api";
+import type {
+  Connection,
+  ConnectResult,
+  SavedConnection,
+  StorageType,
+} from "../api";
 import { PenIcon } from "./icons";
 import { BackHandler } from "./back-handler";
 
@@ -18,7 +23,7 @@ export function ConnectionForm({
   onDisconnect,
 }: {
   connection: SavedConnection;
-  onConnected: (connection: SavedConnection) => void;
+  onConnected: (connection: ConnectResult) => void;
   onCancel?: () => void;
   onDisconnect: () => void;
 }) {
@@ -30,6 +35,13 @@ export function ConnectionForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const chooseFolder = window.noteApi.chooseFolder;
+  // Switching to another location copies the notes over.
+  const moving =
+    connection.connected &&
+    (type !== connection.type ||
+      (type === "local"
+        ? folder.trim() !== connection.path
+        : url.trim() !== connection.url));
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -159,6 +171,12 @@ export function ConnectionForm({
               )}
             </>
           )}
+          {moving && (
+            <p className="text-xs text-ink-muted">
+              Your notes will be copied here. The copies in the old location are
+              kept.
+            </p>
+          )}
           {error && <p className="text-sm text-danger">{error}</p>}
 
           <button
@@ -166,12 +184,14 @@ export function ConnectionForm({
             disabled={submitting}
             type="submit"
           >
-            {type === "local"
-              ? submitting
-                ? "Opening…"
-                : "Use this folder"
-              : submitting
-                ? "Connecting…"
+            {submitting
+              ? moving
+                ? "Copying notes…"
+                : type === "local"
+                  ? "Opening…"
+                  : "Connecting…"
+              : type === "local"
+                ? "Use this folder"
                 : "Connect"}
           </button>
           {onCancel && <BackHandler onBack={onCancel} />}

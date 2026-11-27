@@ -1,7 +1,14 @@
 // Implements the app's API on top of the note store. Each app supplies a way to
 // keep the connection settings, and to reach a folder on the device.
 import { z } from "zod";
-import type { Connection, NoteApi, Result, SavedConnection } from "./api";
+import type {
+  Connection,
+  ConnectResult,
+  NoteApi,
+  Result,
+  SavedConnection,
+} from "./api";
+import { copyNotes } from "./copy-notes.ts";
 import { FolderNotFoundError, type NoteFolder } from "./folder.ts";
 import { createNoteStore, type NoteStore } from "./note-store.ts";
 import { createWebdavFolder } from "./webdav-folder.ts";
@@ -78,6 +85,18 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
+// Identifies where notes are kept, to tell whether a new connection moves them.
+function locationOf(connection: StoredConnection): string {
+  if (connection.type === "local") return `local:${connection.path}`;
+  try {
+    const url = new URL(connection.url);
+    url.pathname = url.pathname.replace(/\/+$/, "");
+    return `webdav:${url.href}`;
+  } catch {
+    return `webdav:${connection.url}`;
+  }
+}
+
 async function attempt<T>(run: () => Promise<T>): Promise<Result<T>> {
   try {
     return { ok: true, value: await run() };
@@ -91,19 +110,28 @@ export function createNoteService(
   settings: SettingsStorage,
   local: LocalStorage,
 ): NoteService {
-  let store: NoteStore | null = null;
+  // The open notes folder, and where it is.
+  let active: {
+    location: string;
+    folder: NoteFolder;
+    store: NoteStore;
+  } | null = null;
 
   function requireStore() {
-    if (!store) throw new Error("No notes folder has been chosen");
-    return store;
+    if (!active) throw new Error("No notes folder has been chosen");
+    return active.store;
   }
 
-  function openStore(connection: Connection) {
-    return createNoteStore(
+  function open(connection: Connection) {
+    const folder =
       connection.type === "local"
         ? local.open(connection.path)
-        : createWebdavFolder(connection),
-    );
+        : createWebdavFolder(connection);
+    return {
+      location: locationOf(connection),
+      folder,
+      store: createNoteStore(folder),
+    };
   }
 
   async function describe(
@@ -118,7 +146,7 @@ export function createNoteService(
         saved?.type === "local" && local.canChooseFolder
           ? saved.path
           : await local.defaultPath(),
-      connected: store !== null,
+      connected: active !== null,
       canSavePassword: await settings.canSavePassword(),
       canChooseFolder: local.canChooseFolder,
     };
@@ -128,11 +156,11 @@ export function createNoteService(
     getConnection: () =>
       attempt(async () => {
         const saved = await settings.load();
-        if (!store && saved) {
+        if (!active && saved) {
           if (saved.type === "local") {
-            store = openStore(saved);
+            active = open(saved);
           } else if (saved.password !== null) {
-            store = openStore({ ...saved, password: saved.password });
+            active = open({ ...saved, password: saved.password });
           }
         }
         return describe(saved);
@@ -144,21 +172,38 @@ export function createNoteService(
         if (connection.type === "local" && !local.canChooseFolder) {
           connection = { type: "local", path: await local.defaultPath() };
         }
-        const next = openStore(connection);
-        await next.prepare();
+        const next = open(connection);
+        await next.store.prepare();
+
+        const saved = await settings.load();
+        let copy: ConnectResult["copy"];
+        if (active && active.location !== next.location) {
+          try {
+            copy = await copyNotes(active.folder, next.folder);
+          } catch (error) {
+            throw new Error(
+              `Couldn't copy your notes from the old location (${errorMessage(error)}). To switch without them, disconnect first.`,
+            );
+          }
+        } else if (!active && saved && locationOf(saved) !== next.location) {
+          copy = null;
+        }
+
         await settings.save(connection);
-        store = next;
-        return describe(
+        active = next;
+        const result: ConnectResult = await describe(
           connection.type === "webdav"
             ? { ...connection, password: null }
             : connection,
         );
+        if (copy !== undefined) result.copy = copy;
+        return result;
       }),
 
     disconnect: () =>
       attempt(async () => {
         await settings.clear();
-        store = null;
+        active = null;
         return null;
       }),
 

@@ -11,9 +11,14 @@ import type { Note } from "./note-types";
 
 export function NotesApp({
   canDownload,
+  notice,
+  onDismissNotice,
   onOpenSettings,
 }: {
   canDownload: boolean;
+  /** A message shown until dismissed. */
+  notice: string | null;
+  onDismissNotice: () => void;
   onOpenSettings: () => void;
 }) {
   const {
@@ -136,6 +141,22 @@ export function NotesApp({
               type="button"
             >
               {unsaved > 0 ? "Retry saving" : "Retry"}
+            </button>
+          </div>
+        )}
+
+        {notice && (
+          <div
+            className="mx-auto mb-4 flex max-w-xl items-center justify-between gap-3 rounded-lg border border-edge px-4 py-2 text-sm text-ink"
+            role="status"
+          >
+            <span>{notice}</span>
+            <button
+              className="shrink-0 rounded-md px-3 py-1 font-medium hover:bg-ink/10"
+              onClick={onDismissNotice}
+              type="button"
+            >
+              OK
             </button>
           </div>
         )}
