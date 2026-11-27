@@ -91,6 +91,8 @@ pinned: false
 archived: false
 created: 2026-11-26T20:00:00.000Z
 updated: 2026-11-26T20:00:00.000Z
+attachments:
+  - attachments/receipt.pdf
 ---
 
 The note body.
@@ -98,7 +100,22 @@ The note body.
 
 Markdown files added by other tools show up too; the frontmatter is optional and
 unknown fields are preserved. Changes made elsewhere are loaded when the window
-regains focus. Subfolders and hidden files are ignored.
+regains focus. Hidden files are ignored, as are subfolders other than
+`attachments`.
+
+### Attachments
+
+Use the paperclip button to attach images or files, up to 25 MB each, to a note.
+They're saved in `<folder>/attachments/`, on the WebDAV server or on this device,
+and listed in the note's frontmatter. A file whose name is taken is saved as
+`<name> (2).<extension>`.
+
+Deleting an attachment, or the note it's on, permanently deletes the file,
+unless another note also lists it. Switching where notes are kept copies (or
+moves) the whole `attachments` folder along with them.
+
+On Linux, clicking an attachment in an open note saves a copy of it; on Android
+it opens in another app.
 
 ## Development
 

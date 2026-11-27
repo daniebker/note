@@ -85,9 +85,104 @@ function storeTests(
     await rm(fileFor(".hidden"));
   });
 
+  test("uploads attachments and deletes their files", async () => {
+    const attachments = path.join(root, "my notes", "attachments");
+    // Every byte value, so any text decoding along the way would show.
+    const data = Uint8Array.from({ length: 70_000 }, (_, i) => i % 256);
+    const note = await store.create({ title: "files" });
+
+    await Promise.all([
+      store.addAttachment(note.id, { name: "my pic #1.png", data }),
+      store.addAttachment(note.id, { name: "my pic #1.png", data }),
+    ]);
+    // Either upload may finish last, so the note is read back.
+    const [added] = await store.list();
+    assert.deepEqual([...added!.attachments].sort(), [
+      "my pic #1 (2).png",
+      "my pic #1.png",
+    ]);
+    const escaped = await store.addAttachment(note.id, {
+      name: "../../.évil?.txt",
+      data: new Uint8Array(),
+    });
+    const odd = escaped.attachments[2]!;
+    assert.equal(odd, "-..-.évil-.txt");
+    assert.deepEqual(
+      (await readdir(attachments)).sort(),
+      [...escaped.attachments].sort(),
+    );
+    assert.deepEqual(await store.readAttachment("my pic #1.png"), data);
+    assert.equal((await store.readAttachment(odd)).length, 0);
+    // The attachments folder isn't a note, and edits keep the list.
+    const edited = await store.update(note.id, { color: "mint" });
+    assert.deepEqual(edited.attachments, escaped.attachments);
+    assert.deepEqual(await store.list(), [edited]);
+    assert.match(
+      await readFile(fileFor(note.id), "utf8"),
+      /attachments:\n {2}- "attachments\/my pic #1\.png"/,
+    );
+
+    const removed = await store.removeAttachment(note.id, "my pic #1.png");
+    assert.deepEqual(removed.attachments, ["my pic #1 (2).png", odd]);
+    assert.deepEqual(
+      (await readdir(attachments)).sort(),
+      [...removed.attachments].sort(),
+    );
+    await assert.rejects(store.readAttachment("my pic #1.png"));
+
+    // Deleting the note deletes what's left.
+    await store.remove(note.id);
+    assert.deepEqual(await readdir(attachments), []);
+  });
+
+  test("keeps files that another note also has", async () => {
+    const note = await store.create({ title: "original" });
+    const { attachments } = await store.addAttachment(note.id, {
+      name: "shared.txt",
+      data: new TextEncoder().encode("shared"),
+    });
+    const source = await readFile(fileFor(note.id), "utf8");
+    await writeFile(fileFor("duplicate"), source);
+
+    await store.remove(note.id);
+    assert.equal((await store.readAttachment("shared.txt")).length, 6);
+    await store.removeAttachment("duplicate", attachments[0]!);
+    await assert.rejects(store.readAttachment("shared.txt"));
+    await store.remove("duplicate");
+  });
+
+  test("leaves a file no note lists alone", async () => {
+    const note = await store.create({ title: "x" });
+    const file = path.join(root, "my notes", "attachments", "mine.txt");
+    await writeFile(file, "mine");
+    await store.removeAttachment(note.id, "mine.txt");
+    assert.equal(await readFile(file, "utf8"), "mine");
+    await rm(file);
+    await store.remove(note.id);
+  });
+
+  test("doesn't overwrite another tool's attachments property", async () => {
+    const source = "---\nattachments: [https://example.com/a]\n---\n\nbody";
+    await writeFile(fileFor("foreign"), source);
+    await assert.rejects(
+      store.addAttachment("foreign", {
+        name: "orphan.txt",
+        data: new Uint8Array(1),
+      }),
+    );
+    await assert.rejects(store.readAttachment("orphan.txt"));
+    await store.update("foreign", { color: "fog" });
+    assert.match(
+      await readFile(fileFor("foreign"), "utf8"),
+      /https:\/\/example\.com\/a/,
+    );
+    await store.remove("foreign");
+  });
+
   test("rejects ids that leave the folder", async () => {
     await assert.rejects(store.update("../x", { title: "x" }));
     await assert.rejects(store.remove("a/b"));
+    await assert.rejects(store.readAttachment("../x"));
   });
 }
 
@@ -112,6 +207,8 @@ describe("local folder", () => {
     const store = createNoteStore(createLocalFolder(folder));
     const note = await store.create({ title: "x" });
     const file = path.join(folder, `${note.id}.md`);
+    // Left by the tests above.
+    await rm(path.join(folder, "attachments"), { recursive: true });
     await chmod(file, 0o640);
     await store.update(note.id, { title: "y" });
     assert.equal((await stat(file)).mode & 0o777, 0o640);

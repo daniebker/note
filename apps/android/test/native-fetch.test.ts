@@ -9,6 +9,7 @@ import { test } from "node:test";
 import { getPatcher } from "webdav";
 import { createNoteStore } from "../../../packages/notes/src/note-store.ts";
 import { createWebdavFolder } from "../../../packages/notes/src/webdav-folder.ts";
+import { fromBase64, toBase64 } from "../src/base64.ts";
 import { createNativeFetch } from "../src/native-fetch.ts";
 
 const ADDRESS = "127.0.0.1:18092";
@@ -38,11 +39,15 @@ test("the note store works through the native fetch adapter", async (t) => {
     "fetch",
     createNativeFetch(async ({ url, ...request }) => {
       methods.add(request.method);
-      const response = await fetch(url, request);
+      const response = await fetch(url, {
+        ...request,
+        body:
+          request.body === undefined ? undefined : fromBase64(request.body),
+      });
       return {
         status: response.status,
         headers: Object.fromEntries(response.headers),
-        body: await response.text(),
+        body: toBase64(new Uint8Array(await response.arrayBuffer())),
       };
     }),
   );
@@ -59,8 +64,12 @@ test("the note store works through the native fetch adapter", async (t) => {
   assert.deepEqual(await store.list(), [note]);
   await store.update(note.id, { pinned: true });
   assert.equal((await store.list())[0]?.pinned, true);
+  const data = Uint8Array.from({ length: 100_000 }, (_, i) => i % 256);
+  await store.addAttachment(note.id, { name: "photo.jpg", data });
+  assert.deepEqual(await store.readAttachment("photo.jpg"), data);
   await store.remove(note.id);
   await store.remove(note.id);
+  await assert.rejects(store.readAttachment("photo.jpg"));
   assert.deepEqual(await store.list(), []);
   for (const method of ["PROPFIND", "MKCOL", "PUT", "GET", "DELETE"]) {
     assert.ok(methods.has(method), method);

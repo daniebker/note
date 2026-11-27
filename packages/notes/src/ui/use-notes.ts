@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Note, NoteInput } from "../note";
+import { MAX_ATTACHMENT_BYTES, type Note, type NoteInput } from "../note";
 import { useCheckOnClose } from "./flush";
 
 export function useNotes() {
@@ -50,15 +50,75 @@ export function useNotes() {
     };
   }, [refresh]);
 
-  async function createNote(data: NoteInput) {
-    const result = await track(window.noteApi.createNote(data));
-    if (!result.ok) {
-      setError(`Couldn't save the note: ${result.error}`);
-      return false;
+  // Only the attachments are taken from the saved note, as the rest may be
+  // behind edits that are still being saved.
+  function applyAttachments({ id, attachments, updatedAt }: Note) {
+    setNotes(
+      (prev) =>
+        prev?.map((n) =>
+          n.id === id ? { ...n, attachments, updatedAt } : n,
+        ) ?? null,
+    );
+  }
+
+  function attachmentError(message: string) {
+    setError(message);
+    return message;
+  }
+
+  async function upload(id: string, files: File[]) {
+    const failures: string[] = [];
+    // One at a time, to hold only one file in memory.
+    for (const file of files) {
+      try {
+        if (file.size > MAX_ATTACHMENT_BYTES) {
+          throw new Error("Attachments can be at most 25 MB");
+        }
+        const data = new Uint8Array(await file.arrayBuffer());
+        const result = await window.noteApi.addAttachment(id, {
+          name: file.name,
+          data,
+        });
+        if (!result.ok) throw new Error(result.error);
+        applyAttachments(result.value);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        failures.push(`Couldn't attach ${file.name}: ${reason}`);
+      }
     }
-    setNotes((prev) => [result.value, ...(prev ?? [])]);
-    setError(null);
-    return true;
+    return failures.length > 0 ? attachmentError(failures.join(". ")) : null;
+  }
+
+  /** Resolves false if the note couldn't be created. */
+  function createNote(data: NoteInput, files: File[] = []) {
+    // Tracked as a whole, so closing waits for the uploads too.
+    return track(
+      (async () => {
+        const result = await window.noteApi.createNote(data);
+        if (!result.ok) {
+          setError(`Couldn't save the note: ${result.error}`);
+          return false;
+        }
+        setNotes((prev) => [result.value, ...(prev ?? [])]);
+        setError(null);
+        await upload(result.value.id, files);
+        return true;
+      })(),
+    );
+  }
+
+  /** Resolves to an error message if any file couldn't be attached. */
+  function addAttachments(id: string, files: File[]) {
+    return track(upload(id, files));
+  }
+
+  async function removeAttachment(id: string, name: string) {
+    const result = await track(window.noteApi.removeAttachment(id, name));
+    if (!result.ok) {
+      return attachmentError(`Couldn't delete ${name}: ${result.error}`);
+    }
+    applyAttachments(result.value);
+    return null;
   }
 
   async function updateNote(id: string, changes: NoteInput) {
@@ -109,6 +169,8 @@ export function useNotes() {
     createNote,
     updateNote,
     deleteNote,
+    addAttachments,
+    removeAttachment,
     retry,
   };
 }

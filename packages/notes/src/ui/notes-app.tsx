@@ -28,6 +28,8 @@ export function NotesApp({
     createNote,
     updateNote,
     deleteNote: removeNote,
+    addAttachments,
+    removeAttachment,
     retry,
   } = useNotes();
   const notes = useMemo(() => loaded ?? [], [loaded]);
@@ -218,7 +220,13 @@ export function NotesApp({
       {editingNote && (
         <EditModal
           key={editingNote.id}
+          attachments={
+            (notes.find((n) => n.id === editingNote.id) ?? editingNote)
+              .attachments
+          }
           note={editingNote}
+          onAttach={(files) => addAttachments(editingNote.id, files)}
+          onRemoveAttachment={(name) => removeAttachment(editingNote.id, name)}
           onClose={() => setEditingNote(null)}
           onDelete={() => deleteNote(editingNote.id)}
           onSave={(changes) => updateNote(editingNote.id, changes)}

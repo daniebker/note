@@ -4,12 +4,14 @@ export type HttpRequest = {
   url: string;
   method: string;
   headers: Record<string, string>;
+  /** Base64 encoded. */
   body?: string;
 };
 
 export type HttpResponse = {
   status: number;
   headers: Record<string, string>;
+  /** Base64 encoded. */
   body: string;
 };
 
@@ -30,6 +32,14 @@ export type NotePlugin = {
   localRead(options: { name: string }): Promise<{ value?: string }>;
   localWrite(options: { name: string; value: string }): Promise<void>;
   localRemove(options: { name: string }): Promise<void>;
+  /** The folder of attached files; empty if there isn't one yet. */
+  attachmentList(): Promise<{ names: string[] }>;
+  /** `data` is base64 encoded, as in the other attachment methods. */
+  attachmentRead(options: { name: string }): Promise<{ data?: string }>;
+  attachmentWrite(options: { name: string; data: string }): Promise<void>;
+  attachmentRemove(options: { name: string }): Promise<void>;
+  /** Hands a copy of a file to an app that can show it. */
+  openFile(options: { name: string; data: string }): Promise<void>;
 };
 
 // Implemented in android/app/src/main/java/.../NotePlugin.java

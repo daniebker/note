@@ -1,4 +1,4 @@
-import type { Note, NoteInput } from "./note";
+import type { NewAttachment, Note, NoteInput } from "./note";
 
 /** Notes kept in a folder on a WebDAV server. */
 export type WebdavConnection = {
@@ -71,7 +71,15 @@ export type NoteApi = {
   listNotes(): Promise<Result<Note[]>>;
   createNote(data: NoteInput): Promise<Result<Note>>;
   updateNote(id: string, changes: NoteInput): Promise<Result<Note>>;
+  /** Also deletes the note's attached files. */
   deleteNote(id: string): Promise<Result<null>>;
+  /** Uploads a file and attaches it to a note. */
+  addAttachment(id: string, file: NewAttachment): Promise<Result<Note>>;
+  /** Takes a file off a note and deletes it. */
+  removeAttachment(id: string, name: string): Promise<Result<Note>>;
+  readAttachment(name: string): Promise<Result<Uint8Array>>;
+  /** Opens a file in another app, where downloading it isn't possible. */
+  openAttachment?(name: string): Promise<Result<null>>;
   /** `handler` saves any drafts and resolves true if nothing would be lost. */
   onBeforeClose(handler: () => Promise<boolean>): () => void;
 };

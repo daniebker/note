@@ -11,6 +11,7 @@ import type {
 import { copyNotes } from "./copy-notes.ts";
 import { FolderNotFoundError, type NoteFolder } from "./folder.ts";
 import { createNoteStore, type NoteStore } from "./note-store.ts";
+import { MAX_ATTACHMENT_BYTES } from "./note.ts";
 import { createWebdavFolder } from "./webdav-folder.ts";
 
 export type StoredConnection =
@@ -42,7 +43,10 @@ export type LocalStorage = {
   canChooseFolder: boolean;
 };
 
-export type NoteService = Omit<NoteApi, "onBeforeClose" | "chooseFolder">;
+export type NoteService = Omit<
+  NoteApi,
+  "onBeforeClose" | "chooseFolder" | "openAttachment"
+>;
 
 const connectionSchema = z.discriminatedUnion("type", [
   z.object({
@@ -69,6 +73,15 @@ const noteSchema = z.object({
   archived: z.boolean().optional(),
 });
 
+const attachmentSchema = z.object({
+  name: z.string(),
+  data: z
+    .instanceof(Uint8Array)
+    .refine((data) => data.byteLength <= MAX_ATTACHMENT_BYTES, {
+      error: "Attachments can be at most 25 MB",
+    }),
+});
+
 function errorMessage(error: unknown) {
   if (error instanceof z.ZodError) {
     return error.issues[0]?.message ?? "Invalid input";
@@ -78,6 +91,7 @@ function errorMessage(error: unknown) {
     return "The server rejected the username or password";
   }
   if (status === 404) return "The notes folder was not found on the server";
+  if (status === 413) return "The server says the file is too large";
   if (error instanceof FolderNotFoundError) return error.message;
   const code = (error as { code?: string } | null)?.code;
   if (code === "EACCES" || code === "EPERM") {
@@ -226,5 +240,23 @@ export function createNoteService(
         await requireStore().remove(z.string().parse(id));
         return null;
       }),
+    addAttachment: (id, file) =>
+      attempt(async () =>
+        requireStore().addAttachment(
+          z.string().parse(id),
+          attachmentSchema.parse(file),
+        ),
+      ),
+    removeAttachment: (id, name) =>
+      attempt(async () =>
+        requireStore().removeAttachment(
+          z.string().parse(id),
+          z.string().parse(name),
+        ),
+      ),
+    readAttachment: (name) =>
+      attempt(async () =>
+        requireStore().readAttachment(z.string().parse(name)),
+      ),
   };
 }

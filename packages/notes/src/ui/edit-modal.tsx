@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { openAttachment } from "./attachment-files";
+import { AttachButton, Attachments } from "./attachments";
 import { ColorPicker } from "./color-picker";
 import { NoteMarkdown } from "./note-markdown";
 import { PaletteIcon, TrashIcon } from "./icons";
@@ -9,11 +11,19 @@ import type { NoteInput } from "../note";
 
 export function EditModal({
   note,
+  attachments,
+  onAttach,
+  onRemoveAttachment,
   onSave,
   onDelete,
   onClose,
 }: {
   note: Note;
+  /** Kept up to date, unlike `note`. */
+  attachments: string[];
+  /** Resolves to an error message if it fails, like `onRemoveAttachment`. */
+  onAttach: (files: File[]) => Promise<string | null>;
+  onRemoveAttachment: (name: string) => Promise<string | null>;
   onSave: (changes: NoteInput) => void;
   onDelete: () => void;
   onClose: () => void;
@@ -23,6 +33,8 @@ export function EditModal({
   const [color, setColor] = useState(note.color);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [uploads, setUploads] = useState(0);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const saved = useRef({
     title: note.title,
@@ -39,6 +51,19 @@ export function EditModal({
     if (color !== saved.current.color) changes.color = color;
     saved.current = { title, content, color };
     if (Object.keys(changes).length > 0) onSave(changes);
+  }
+
+  async function attach(files: File[]) {
+    setAttachmentError(null);
+    setUploads((n) => n + 1);
+    const error = await onAttach(files);
+    setUploads((n) => n - 1);
+    if (error) setAttachmentError(error);
+  }
+
+  async function showResult(action: Promise<string | null>) {
+    setAttachmentError(null);
+    setAttachmentError(await action);
   }
 
   function saveAndClose() {
@@ -81,6 +106,15 @@ export function EditModal({
         style={{ backgroundColor: colorValue(color) }}
       >
         <div className="flex-1 overflow-y-auto p-4">
+          {attachments.length > 0 && (
+            <div className="mb-3">
+              <Attachments
+                names={attachments}
+                onOpen={(name) => void showResult(openAttachment(name))}
+                onRemove={(name) => void showResult(onRemoveAttachment(name))}
+              />
+            </div>
+          )}
           <input
             className="w-full bg-transparent text-lg font-medium text-ink placeholder-ink-muted outline-none"
             onChange={(e) => setTitle(e.target.value)}
@@ -103,6 +137,17 @@ export function EditModal({
             />
           )}
         </div>
+
+        {uploads > 0 && (
+          <p className="px-4 pb-2 text-xs text-ink-muted" role="status">
+            Attaching…
+          </p>
+        )}
+        {attachmentError && (
+          <p className="px-4 pb-2 text-xs text-danger" role="alert">
+            {attachmentError}
+          </p>
+        )}
 
         <div className="flex items-center gap-1 border-t border-black/10 px-3 py-2 dark:border-white/10">
           <div className="relative">
@@ -127,6 +172,10 @@ export function EditModal({
               </div>
             )}
           </div>
+          <AttachButton
+            className="rounded-full p-2 text-ink-muted hover:bg-ink/10"
+            onFiles={(files) => void attach(files)}
+          />
           <button
             aria-label="Delete note"
             className="rounded-full p-2 text-ink-muted hover:bg-ink/10"

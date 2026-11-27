@@ -12,6 +12,10 @@ const api: NoteApi = {
   createNote: (data) => ipcRenderer.invoke("notes:create", data),
   updateNote: (id, changes) => ipcRenderer.invoke("notes:update", id, changes),
   deleteNote: (id) => ipcRenderer.invoke("notes:delete", id),
+  addAttachment: (id, file) => ipcRenderer.invoke("attachments:add", id, file),
+  removeAttachment: (id, name) =>
+    ipcRenderer.invoke("attachments:remove", id, name),
+  readAttachment: (name) => ipcRenderer.invoke("attachments:read", name),
   onBeforeClose(handler) {
     const listener = async () => {
       const saved = await handler().catch(() => false);

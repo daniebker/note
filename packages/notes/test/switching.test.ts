@@ -279,3 +279,51 @@ test("the service moves notes when asked", async () => {
     [note.id],
   );
 });
+
+const attached = (name: string, body: string) =>
+  `---\ntitle: T\nattachments:\n  - attachments/${name}\n---\n\n${body}`;
+
+for (const kind of ["local", "WebDAV"] as const) {
+  test(`moves attachments into a ${kind} folder, renaming clashes`, async () => {
+    const from = await folderWith(`attach-from-${kind}`, {
+      "a.md": attached("pic.png", "a"),
+      "b.md": attached("same.txt", "b"),
+    });
+    await folderWith(`attach-from-${kind}/attachments`, {
+      "pic.png": "new picture",
+      "same.txt": "same",
+    });
+    const name = kind === "local" ? `attach-to-${kind}` : `dav/attach-to`;
+    const to = await folderWith(name, {});
+    await folderWith(`${name}/attachments`, {
+      "pic.png": "old picture",
+      "same.txt": "same",
+    });
+    const target =
+      kind === "local"
+        ? createLocalFolder(to)
+        : createWebdavFolder({
+            url: `http://${ADDRESS}/attach-to`,
+            username: "",
+            password: "",
+          });
+
+    // Copying first checks that doing it again changes nothing.
+    await copyNotes(createLocalFolder(from), target);
+    const summary = await copyNotes(createLocalFolder(from), target, {
+      move: true,
+    });
+    assert.deepEqual(summary, { copied: 0, renamed: 0, removed: 2 });
+    assert.deepEqual((await readdir(path.join(to, "attachments"))).sort(), [
+      "pic (2).png",
+      "pic.png",
+      "same.txt",
+    ]);
+    const read = (file: string) => readFile(path.join(to, file), "utf8");
+    assert.equal(await read("attachments/pic.png"), "old picture");
+    assert.equal(await read("attachments/pic (2).png"), "new picture");
+    assert.equal(await read("a.md"), attached("pic (2).png", "a"));
+    assert.equal(await read("b.md"), attached("same.txt", "b"));
+    assert.deepEqual(await readdir(path.join(from, "attachments")), []);
+  });
+}

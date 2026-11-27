@@ -1,5 +1,6 @@
-// The storage the note store keeps its markdown files in: one flat folder,
-// either on a WebDAV server or on this device.
+// The storage the note store keeps its files in: a folder of markdown files
+// with a folder of attachments inside it, either on a WebDAV server or on this
+// device.
 
 export type FileInfo = {
   name: string;
@@ -8,7 +9,20 @@ export type FileInfo = {
   modifiedAt: Date;
 };
 
+/** The folder of attached files. It is only created once there is a file. */
+export type AttachmentFolder = {
+  /** The names of the files in it; none if it doesn't exist. */
+  list(): Promise<string[]>;
+  /** Null if the file doesn't exist. */
+  read(name: string): Promise<Uint8Array | null>;
+  /** Creates the folder if needed, but not the notes folder around it. */
+  write(name: string, data: Uint8Array): Promise<void>;
+  /** Removing a file that is already gone is not an error. */
+  remove(name: string): Promise<void>;
+};
+
 export type NoteFolder = {
+  attachments: AttachmentFolder;
   /**
    * Checks the folder is reachable, creating it if it doesn't exist. A missing
    * folder is an error everywhere else.

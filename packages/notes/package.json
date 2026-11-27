@@ -5,6 +5,7 @@
   "private": true,
   "exports": {
     "./api": "./src/api.ts",
+    "./note": "./src/note.ts",
     "./service": "./src/service.ts",
     "./local-folder": "./src/local-folder.ts",
     "./folder": "./src/folder.ts",

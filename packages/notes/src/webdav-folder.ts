@@ -2,6 +2,7 @@
 import { createClient, type FileStat } from "webdav";
 import type { WebdavConnection } from "./api";
 import type { FileInfo, NoteFolder } from "./folder";
+import { ATTACHMENTS_FOLDER } from "./file-names.ts";
 
 const MAX_CONCURRENT_REQUESTS = 8;
 
@@ -61,7 +62,61 @@ export function createWebdavFolder({
     }
   }
 
+  async function removeFile(path: string) {
+    await nullIfNotFound(request(() => dav.deleteFile(path)));
+  }
+
+  async function writeFile(path: string, contents: string | ArrayBuffer) {
+    const written = await request(() => dav.putFileContents(path, contents));
+    if (!written) throw new Error(`Failed to write ${path}`);
+  }
+
+  const attachmentsRoot = filePath(ATTACHMENTS_FOLDER);
+  const attachmentPath = (name: string) => `${attachmentsRoot}/${name}`;
+
+  async function createAttachmentsFolder() {
+    if (await request(() => dav.exists(attachmentsRoot))) return;
+    try {
+      await request(() => dav.createDirectory(attachmentsRoot));
+    } catch (error) {
+      // Another device may have just created it.
+      if (!(await request(() => dav.exists(attachmentsRoot)))) throw error;
+    }
+  }
+
   return {
+    attachments: {
+      async list() {
+        const entries = await nullIfNotFound(
+          request(
+            () =>
+              dav.getDirectoryContents(attachmentsRoot) as Promise<FileStat[]>,
+          ),
+        );
+        return (entries ?? [])
+          .filter((entry) => entry.type === "file")
+          .map((entry) => entry.basename);
+      },
+
+      async read(name) {
+        const data = await nullIfNotFound(
+          request(() => dav.getFileContents(attachmentPath(name))),
+        );
+        // A Buffer under Node, an ArrayBuffer in a browser.
+        return data === null
+          ? null
+          : new Uint8Array(data as ArrayBuffer | Uint8Array);
+      },
+
+      async write(name, data) {
+        await createAttachmentsFolder();
+        // The client only sends strings, Buffers and ArrayBuffers as they are.
+        await writeFile(attachmentPath(name), new Uint8Array(data).buffer);
+      },
+
+      remove: (name) => removeFile(attachmentPath(name)),
+    },
+
     // Its parent folder must already be there.
     async prepare() {
       if (!(await dav.exists(root || "/"))) await dav.createDirectory(root);
@@ -89,15 +144,8 @@ export function createWebdavFolder({
       return source as string | null;
     },
 
-    async write(name, contents) {
-      const written = await request(() =>
-        dav.putFileContents(filePath(name), contents),
-      );
-      if (!written) throw new Error(`Failed to write ${filePath(name)}`);
-    },
+    write: (name, contents) => writeFile(filePath(name), contents),
 
-    async remove(name) {
-      await nullIfNotFound(request(() => dav.deleteFile(filePath(name))));
-    },
+    remove: (name) => removeFile(filePath(name)),
   };
 }

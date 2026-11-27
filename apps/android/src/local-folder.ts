@@ -1,5 +1,6 @@
 import { FolderNotFoundError, type NoteFolder } from "@repo/notes/folder";
 import type { LocalFile, NotePlugin } from "./native";
+import { fromBase64, toBase64 } from "./base64.ts";
 
 function fileInfo({ name, modified, size }: LocalFile) {
   return {
@@ -12,6 +13,19 @@ function fileInfo({ name, modified, size }: LocalFile) {
 /** The notes folder in the app's own storage, reached through native code. */
 export function createLocalFolder(native: NotePlugin): NoteFolder {
   return {
+    attachments: {
+      async list() {
+        return (await native.attachmentList()).names;
+      },
+      async read(name) {
+        const { data } = await native.attachmentRead({ name });
+        return data === undefined ? null : fromBase64(data);
+      },
+      write: (name, data) =>
+        native.attachmentWrite({ name, data: toBase64(data) }),
+      remove: (name) => native.attachmentRemove({ name }),
+    },
+
     prepare: () => native.localPrepare(),
 
     async list() {

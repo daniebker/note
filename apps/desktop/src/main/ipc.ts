@@ -49,4 +49,13 @@ export function registerIpc() {
     service.updateNote(id, changes),
   );
   ipcMain.handle("notes:delete", (_event, id) => service.deleteNote(id));
+  ipcMain.handle("attachments:add", (_event, id, file) =>
+    service.addAttachment(id, file),
+  );
+  ipcMain.handle("attachments:remove", (_event, id, name) =>
+    service.removeAttachment(id, name),
+  );
+  ipcMain.handle("attachments:read", (_event, name) =>
+    service.readAttachment(name),
+  );
 }

@@ -41,6 +41,18 @@ final class LocalFolder {
         }
     }
 
+    /** The folder of attached files inside this one. */
+    LocalFolder attachments() {
+        return new LocalFolder(new File(folder, "attachments"));
+    }
+
+    /** Creates this folder, but not any missing folder around it. */
+    void create() throws IOException {
+        if (!folder.mkdir() && !folder.isDirectory()) {
+            throw new IOException("Couldn't create " + folder);
+        }
+    }
+
     /** Null if the folder doesn't exist. */
     List<Entry> list() {
         File[] files = folder.listFiles();
@@ -63,6 +75,12 @@ final class LocalFolder {
 
     /** Null if the file doesn't exist. */
     String read(String name) throws IOException {
+        byte[] contents = readBytes(name);
+        return contents == null ? null : new String(contents, StandardCharsets.UTF_8);
+    }
+
+    /** Null if the file doesn't exist. */
+    byte[] readBytes(String name) throws IOException {
         File file = file(name);
         if (!file.isFile()) return null;
         // java.nio.file needs Android 8.
@@ -71,17 +89,21 @@ final class LocalFolder {
             byte[] buffer = new byte[8192];
             for (int read; (read = in.read(buffer)) != -1; ) contents.write(buffer, 0, read);
         }
-        return new String(contents.toByteArray(), StandardCharsets.UTF_8);
+        return contents.toByteArray();
+    }
+
+    void write(String name, String contents) throws IOException {
+        write(name, contents.getBytes(StandardCharsets.UTF_8));
     }
 
     /** Written to a hidden file and moved into place, so it's never left half written. */
-    void write(String name, String contents) throws IOException {
+    void write(String name, byte[] contents) throws IOException {
         if (!folder.isDirectory()) throw new IOException("The notes folder was not found");
         File target = file(name);
         File temporary = new File(folder, "." + name + "." + UUID.randomUUID() + ".tmp");
         try {
             try (FileOutputStream out = new FileOutputStream(temporary)) {
-                out.write(contents.getBytes(StandardCharsets.UTF_8));
+                out.write(contents);
                 out.getFD().sync();
             }
             if (!temporary.renameTo(target)) throw new IOException("Couldn't save " + name);
@@ -97,7 +119,7 @@ final class LocalFolder {
     }
 
     // Names come from the WebView, so anything that could leave the folder is rejected.
-    private File file(String name) {
+    File file(String name) {
         if (name == null || name.isEmpty() || name.equals(".") || name.equals("..")
                 || name.contains("/") || name.contains("\\") || name.contains("\0")) {
             throw new IllegalArgumentException("Invalid file name");

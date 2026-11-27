@@ -1,5 +1,6 @@
 package io.github.daniebker.note;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
@@ -35,6 +36,25 @@ public class LocalFolderTest {
         assertNull(folder.read("a.md"));
         assertNull(folder.stat("a.md"));
         assertTrue(folder.list().isEmpty());
+    }
+
+    @Test
+    public void keepsAttachmentsInASubfolder() throws Exception {
+        File root = Files.createTempDirectory("note-local").toFile();
+        LocalFolder folder = new LocalFolder(new File(root, "notes"));
+        LocalFolder attachments = folder.attachments();
+        // Never creates the notes folder around it.
+        assertThrows(java.io.IOException.class, attachments::create);
+
+        folder.prepare();
+        attachments.create();
+        attachments.create();
+        byte[] data = {0, -1, 127, -128};
+        attachments.write("a.bin", data);
+        assertArrayEquals(data, attachments.readBytes("a.bin"));
+        assertTrue(folder.list().isEmpty());
+        attachments.remove("a.bin");
+        assertNull(attachments.readBytes("a.bin"));
     }
 
     @Test

@@ -13,6 +13,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { ATTACHMENTS_FOLDER } from "./file-names.ts";
 import { type FileInfo, FolderNotFoundError, type NoteFolder } from "./folder.ts";
 
 function code(error: unknown) {
@@ -48,7 +49,61 @@ export function createLocalFolder(folder: string): NoteFolder {
     if (!stats.isDirectory()) throw new Error(`${folder} is not a folder`);
   }
 
+  const attachments = path.join(folder, ATTACHMENTS_FOLDER);
+  const attachmentPath = (name: string) => path.join(attachments, name);
+
+  // Written to a hidden file first and moved into place, so that a crash or
+  // full disk can't leave a file half written.
+  async function replaceFile(target: string, contents: string | Uint8Array) {
+    const existing = await nullIfMissing(stat(target));
+    const temporary = path.join(
+      path.dirname(target),
+      `.${path.basename(target)}.${randomUUID()}.tmp`,
+    );
+    try {
+      await writeFile(temporary, contents);
+      // Keeps the permissions of the file being replaced.
+      if (existing) await chmod(temporary, existing.mode & 0o7777);
+      await rename(temporary, target);
+    } catch (error) {
+      await rm(temporary, { force: true });
+      throw error;
+    }
+  }
+
   return {
+    attachments: {
+      async list() {
+        const entries = await nullIfMissing(
+          readdir(attachments, { withFileTypes: true }),
+        );
+        return (entries ?? [])
+          .filter((entry) => entry.isFile())
+          .map((entry) => entry.name);
+      },
+
+      async read(name) {
+        const data = await nullIfMissing(readFile(attachmentPath(name)));
+        // A copy, as a Buffer may be a view of a larger shared one.
+        return data && new Uint8Array(data);
+      },
+
+      async write(name, data) {
+        await requireFolder();
+        // Not recursive, so the notes folder is never recreated here.
+        try {
+          await mkdir(attachments);
+        } catch (error) {
+          if (code(error) !== "EEXIST") throw error;
+        }
+        await replaceFile(attachmentPath(name), data);
+      },
+
+      async remove(name) {
+        await rm(attachmentPath(name), { force: true });
+      },
+    },
+
     async prepare() {
       await mkdir(folder, { recursive: true });
       await requireFolder();
@@ -80,21 +135,9 @@ export function createLocalFolder(folder: string): NoteFolder {
       return nullIfMissing(readFile(filePath(name), "utf8"));
     },
 
-    // Written to a hidden file first and moved into place, so that a crash
-    // or full disk can't leave a note half written.
     async write(name, contents) {
       await requireFolder();
-      const existing = await nullIfMissing(stat(filePath(name)));
-      const temporary = filePath(`.${name}.${randomUUID()}.tmp`);
-      try {
-        await writeFile(temporary, contents);
-        // Keeps the permissions of the file being replaced.
-        if (existing) await chmod(temporary, existing.mode & 0o7777);
-        await rename(temporary, filePath(name));
-      } catch (error) {
-        await rm(temporary, { force: true });
-        throw error;
-      }
+      await replaceFile(filePath(name), contents);
     },
 
     async remove(name) {
