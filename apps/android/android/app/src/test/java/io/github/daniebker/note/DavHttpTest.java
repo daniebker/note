@@ -1,9 +1,11 @@
 package io.github.daniebker.note;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -49,7 +51,23 @@ public class DavHttpTest {
         headers.put("Authorization", Credentials.basic("u", password));
         if (method.equals("PROPFIND")) headers.put("Depth", "1");
         String url = "http://127.0.0.1:" + PORT + path;
-        return DavHttp.read(http.newCall(url, method, headers, body).execute());
+        byte[] bytes = body == null ? null : body.getBytes(StandardCharsets.UTF_8);
+        return DavHttp.read(http.newCall(url, method, headers, bytes).execute());
+    }
+
+    private static String text(DavHttp.Result result) {
+        return new String(result.body, StandardCharsets.UTF_8);
+    }
+
+    @Test
+    public void keepsBinaryBodiesIntact() throws Exception {
+        byte[] data = new byte[256];
+        for (int i = 0; i < data.length; i++) data[i] = (byte) i;
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", Credentials.basic("u", "p"));
+        String url = "http://127.0.0.1:" + PORT + "/binary";
+        DavHttp.read(http.newCall(url, "PUT", headers, data).execute());
+        assertArrayEquals(data, DavHttp.read(http.newCall(url, "GET", headers, null).execute()).body);
     }
 
     @Test
@@ -58,10 +76,10 @@ public class DavHttpTest {
         assertEquals(201, send("MKCOL", "/notes", null, "p").status);
         String content = "ünï 🎉\n";
         assertEquals(201, send("PUT", "/notes/a%20b.md", content, "p").status);
-        assertEquals(content, send("GET", "/notes/a%20b.md", null, "p").body);
+        assertEquals(content, text(send("GET", "/notes/a%20b.md", null, "p")));
         DavHttp.Result listing = send("PROPFIND", "/notes", null, "p");
         assertEquals(207, listing.status);
-        assertTrue(listing.body.contains("a%20b.md"));
+        assertTrue(text(listing).contains("a%20b.md"));
         assertTrue(listing.headers.get("content-type").contains("xml"));
         assertEquals(201, send("PUT", "/notes/empty.md", null, "p").status);
         assertEquals(204, send("DELETE", "/notes/a%20b.md", null, "p").status);

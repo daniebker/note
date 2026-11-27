@@ -5,7 +5,10 @@
   "private": true,
   "exports": {
     "./api": "./src/api.ts",
+    "./note": "./src/note.ts",
     "./service": "./src/service.ts",
+    "./local-folder": "./src/local-folder.ts",
+    "./folder": "./src/folder.ts",
     "./theme": "./src/theme.ts",
     "./window": "./src/window.d.ts",
     "./styles.css": "./src/styles.css",
@@ -38,5 +41,6 @@
     "eslint": "^9.39.1",
     "tailwindcss": "^4.1.5",
     "typescript": "5.9.2"
-  }
+  },
+  "license": "AGPL-3.0-or-later"
 }

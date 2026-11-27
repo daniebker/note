@@ -1,7 +1,8 @@
 # Note
 
 A Google Keep–style markdown note taking app for the Linux desktop and Android.
-Notes are plain markdown files in a folder on a WebDAV server.
+Notes are plain markdown files in a folder, either on this device or on a
+WebDAV server so they sync between devices.
 
 ## Linux
 
@@ -14,9 +15,24 @@ chmod +x apps/desktop/release/Note-*.AppImage
 ./apps/desktop/release/Note-*.AppImage
 ```
 
-On first start, enter the URL of the WebDAV folder for your notes and your
-credentials. The password is encrypted with the system keyring; without a
-keyring it isn't saved and you're asked for it on each start.
+On first start, choose where to keep your notes:
+
+- **This device**: a folder on your computer, `~/Documents/Notes` unless you
+  pick another. Nothing is synced, so you can use any tool you like (Syncthing,
+  a Git repository, a cloud drive's folder) to back it up or share it.
+- **WebDAV server**: the URL of the WebDAV folder and your credentials. The
+  password is encrypted with the system keyring; without a keyring it isn't
+  saved and you're asked for it on each start. A copy of your notes is kept on
+  your computer, so they work [offline](#offline-and-syncing).
+
+You can switch at any time from Settings, between the two or to another folder
+or server. Your notes are copied to the new location. Tick "Remove them from
+the old location" to move them instead: they're deleted there only once every
+note has been copied, and never if the two locations turn out to be the same
+folder. A note that is already there is skipped if it's the
+same, and kept alongside as `<name> (2).md` if it differs, so nothing is
+overwritten. If the old location can't be read (say, the server is down),
+the switch is cancelled; disconnect first to switch without your notes.
 
 ## Android
 
@@ -28,6 +44,10 @@ npm install
 npm run apk
 adb install apps/android/android/app/build/outputs/apk/debug/app-debug.apk
 ```
+
+Notes kept on the device are stored in the app's own storage, in
+`Android/data/io.github.daniebker.note/files/notes`, where you can reach them
+over USB. Android deletes this folder when the app is uninstalled.
 
 This is a debug build, signed with a key specific to the machine that built it,
 so a build from elsewhere (including CI) can't update it in place. The password
@@ -60,6 +80,40 @@ gh secret set ANDROID_KEY_PASSWORD        # the same password
 
 Don't commit the keystore.
 
+## Offline and syncing
+
+With a WebDAV server, the app keeps a copy of every note and attachment on the
+device and works from that, so you can read and edit without a connection.
+Changes are sent shortly after you make them. Changes from elsewhere are
+fetched when the app starts or regains focus, every minute while it's open, and
+when you press the sync button. Only files that changed are transferred. Syncing
+happens while the app is open: anything not yet sent goes the next time.
+
+When a note was changed both on this device and elsewhere since the last sync:
+
+- Changes to different parts, such as the text on one side and the color or an
+  attachment on the other, are merged. If both changed the color, pin or
+  archive state, this device's choice is kept.
+- If both changed the text or title, the server's version keeps the note and
+  yours is saved beside it, titled `<title> (conflicted copy)`.
+- An edit wins over a deletion.
+- Different files added under one name are both kept, one of them renamed.
+
+Two limits:
+
+- Plain WebDAV can't lock files. If two devices upload to the same file at the
+  same instant, the later upload replaces the earlier one.
+- If a server folder that held five or more files is suddenly empty, nothing is
+  deleted from the device and an error is shown. If you did mean to empty it,
+  disconnect and connect again.
+
+The copy isn't encrypted by the app. It's in the app's data folder on Linux
+(`~/.config/Note/mirrors`) and in private app storage on Android. Disconnecting,
+or switching elsewhere, deletes it once the server has everything. If you
+disconnect with changes still unsent, it's kept and they're sent when you
+connect to the same folder with the same username again. Switching to another
+location needs the old server to be reachable, so that nothing is left behind.
+
 ## Note files
 
 Each note is `<folder>/<name>.md`:
@@ -72,6 +126,8 @@ pinned: false
 archived: false
 created: 2026-11-26T20:00:00.000Z
 updated: 2026-11-26T20:00:00.000Z
+attachments:
+  - attachments/receipt.pdf
 ---
 
 The note body.
@@ -79,7 +135,22 @@ The note body.
 
 Markdown files added by other tools show up too; the frontmatter is optional and
 unknown fields are preserved. Changes made elsewhere are loaded when the window
-regains focus. Subfolders and hidden files are ignored.
+regains focus (after syncing, for a WebDAV server). Hidden files are ignored, as are subfolders other than
+`attachments`.
+
+### Attachments
+
+Use the paperclip button to attach images or files, up to 25 MB each, to a note.
+They're saved in `<folder>/attachments/`, on the WebDAV server or on this device,
+and listed in the note's frontmatter. A file whose name is taken is saved as
+`<name> (2).<extension>`.
+
+Deleting an attachment, or the note it's on, permanently deletes the file,
+unless another note also lists it. Switching where notes are kept copies (or
+moves) the whole `attachments` folder along with them.
+
+On Linux, clicking an attachment in an open note saves a copy of it; on Android
+it opens in another app.
 
 ## Development
 
@@ -101,13 +172,24 @@ Copy the web app's SQLite database to your machine, then export its notes
 node apps/desktop/scripts/export-legacy-notes.mjs note.db exported-notes
 ```
 
-This writes one folder per user. Upload the contents of yours to the WebDAV
-folder.
+This writes one folder per user. Copy the contents of yours to your notes
+folder, or upload them to the WebDAV folder.
 
 ## Layout
 
 - `apps/desktop`: the Electron app
 - `apps/android`: the Capacitor app and its native Java code
-- `packages/notes`: the UI and note storage both apps share
+- `packages/notes`: the UI and note storage both apps share (the WebDAV and
+  desktop folders; Android's is in `apps/android/src/local-folder.ts` and
+  `LocalFolder.java`)
 - `apps/docs`: Next.js starter app
 - `packages/*`: shared UI, ESLint, Tailwind and TypeScript config
+
+## License
+
+Copyright (C) 2026 Daniel Baker
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version. It is distributed without any warranty. See [LICENSE](LICENSE).

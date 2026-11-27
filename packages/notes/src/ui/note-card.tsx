@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Attachments } from "./attachments";
 import { ColorPicker } from "./color-picker";
 import { NoteMarkdown } from "./note-markdown";
 import { downloadNoteAsMarkdown } from "./note-download";
@@ -71,6 +72,12 @@ export function NoteCard({
       </button>
 
       <div className="cursor-pointer" onClick={onOpen}>
+        {note.attachments.length > 0 && (
+          // Clear of the pin button.
+          <div className="mb-2 mt-5">
+            <Attachments limit={4} names={note.attachments} />
+          </div>
+        )}
         {note.title && (
           <h3 className="mb-2 pr-7 text-sm font-semibold text-ink">
             {note.title}

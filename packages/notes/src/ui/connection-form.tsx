@@ -1,10 +1,20 @@
 import { useState, type FormEvent } from "react";
-import type { SavedConnection } from "../api";
+import type {
+  Connection,
+  ConnectResult,
+  SavedConnection,
+  StorageType,
+} from "../api";
 import { PenIcon } from "./icons";
 import { BackHandler } from "./back-handler";
 
 const inputClass =
   "w-full rounded-md border border-edge bg-transparent px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/20";
+
+const storageOptions: { type: StorageType; label: string }[] = [
+  { type: "local", label: "This device" },
+  { type: "webdav", label: "WebDAV server" },
+];
 
 export function ConnectionForm({
   connection,
@@ -13,24 +23,46 @@ export function ConnectionForm({
   onDisconnect,
 }: {
   connection: SavedConnection;
-  onConnected: (connection: SavedConnection) => void;
+  onConnected: (connection: ConnectResult) => void;
   onCancel?: () => void;
   onDisconnect: () => void;
 }) {
+  const [type, setType] = useState(connection.type);
   const [url, setUrl] = useState(connection.url);
   const [username, setUsername] = useState(connection.username);
   const [password, setPassword] = useState("");
+  const [folder, setFolder] = useState(connection.path);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [removeOld, setRemoveOld] = useState(false);
+  const chooseFolder = window.noteApi.chooseFolder;
+  // Switching to another location copies the notes over.
+  const moving =
+    connection.connected &&
+    (type !== connection.type ||
+      (type === "local"
+        ? folder.trim() !== connection.path
+        : url.trim() !== connection.url));
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setSubmitting(true);
-    const result = await window.noteApi.connect({ url, username, password });
+    const next: Connection =
+      type === "local"
+        ? { type, path: folder }
+        : { type, url, username, password };
+    const result = await window.noteApi.connect(next, {
+      removeOld: moving && removeOld,
+    });
     setSubmitting(false);
     if (result.ok) onConnected(result.value);
     else setError(result.error);
+  }
+
+  async function handleChooseFolder() {
+    const chosen = await chooseFolder?.(folder);
+    if (chosen) setFolder(chosen);
   }
 
   return (
@@ -38,47 +70,134 @@ export function ConnectionForm({
       <div className="w-full max-w-sm rounded-2xl border border-edge bg-surface p-8 shadow-sm">
         <div className="mb-6 flex flex-col items-center gap-2">
           <PenIcon className="h-10 w-10" />
-          <h1 className="text-xl font-medium text-ink">Connect to WebDAV</h1>
+          <h1 className="text-xl font-medium text-ink">Where to keep notes</h1>
           <p className="text-center text-sm text-ink-muted">
-            Your notes are kept as markdown files in this folder.
+            Your notes are kept as markdown files in a folder.
           </p>
         </div>
 
-        <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
-          <input
-            aria-label="Folder URL"
-            className={inputClass}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://example.com/dav/notes"
-            required
-            type="url"
-            value={url}
-          />
-          <input
-            aria-label="Username"
-            className={inputClass}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
-            value={username}
-          />
-          <input
-            aria-label="Password"
-            className={inputClass}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            type="password"
-            value={password}
-          />
+        <div
+          aria-label="Storage"
+          className="mb-4 grid grid-cols-2 rounded-md border border-edge p-1"
+          role="radiogroup"
+        >
+          {storageOptions.map((option) => (
+            <button
+              aria-checked={type === option.type}
+              className={`rounded px-3 py-1.5 text-sm transition-colors ${
+                type === option.type
+                  ? "bg-accent/15 font-medium text-accent"
+                  : "text-ink-muted hover:bg-ink/10"
+              }`}
+              key={option.type}
+              onClick={() => {
+                setType(option.type);
+                setError(null);
+              }}
+              role="radio"
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
 
-          {url.startsWith("http://") && (
-            <p className="text-xs text-ink-muted">
-              Over http:// your password and notes are sent unencrypted.
-            </p>
+        <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+          {type === "local" ? (
+            <>
+              <p className="text-sm text-ink-muted">
+                Notes are saved on this device only and aren&apos;t synced.
+              </p>
+              {connection.canChooseFolder ? (
+                <div className="flex gap-2">
+                  <input
+                    aria-label="Folder"
+                    className={inputClass}
+                    onChange={(e) => setFolder(e.target.value)}
+                    placeholder="/home/you/Notes"
+                    required
+                    value={folder}
+                  />
+                  {chooseFolder && (
+                    <button
+                      className="shrink-0 rounded-md border border-edge px-3 text-sm text-ink hover:bg-ink/10"
+                      onClick={handleChooseFolder}
+                      type="button"
+                    >
+                      Choose…
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <p className="break-all rounded-md bg-ink/5 px-3 py-2 font-mono text-xs text-ink-muted">
+                  {folder}
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-ink-muted">
+                A copy is kept on this device, so your notes also work offline.
+              </p>
+              <input
+                aria-label="Folder URL"
+                className={inputClass}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://example.com/dav/notes"
+                required
+                type="url"
+                value={url}
+              />
+              <input
+                aria-label="Username"
+                className={inputClass}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Username"
+                value={username}
+              />
+              <input
+                aria-label="Password"
+                className={inputClass}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                type="password"
+                value={password}
+              />
+
+              {url.startsWith("http://") && (
+                <p className="text-xs text-ink-muted">
+                  Over http:// your password and notes are sent unencrypted.
+                </p>
+              )}
+              {!connection.canSavePassword && (
+                <p className="text-xs text-ink-muted">
+                  No system keyring was found, so the password won&apos;t be
+                  saved.
+                </p>
+              )}
+            </>
           )}
-          {!connection.canSavePassword && (
-            <p className="text-xs text-ink-muted">
-              No system keyring was found, so the password won&apos;t be saved.
-            </p>
+          {moving && (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs text-ink-muted">
+                Your notes will be copied here.
+              </p>
+              <label className="flex items-start gap-2 text-sm text-ink">
+                <input
+                  checked={removeOld}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent)]"
+                  onChange={(e) => setRemoveOld(e.target.checked)}
+                  type="checkbox"
+                />
+                <span>Remove them from the old location</span>
+              </label>
+              {removeOld && (
+                <p className="text-xs text-ink-muted">
+                  They&apos;re deleted there once they&apos;ve all been copied.
+                  Other devices using the old location will no longer see them.
+                </p>
+              )}
+            </div>
           )}
           {error && <p className="text-sm text-danger">{error}</p>}
 
@@ -87,7 +206,17 @@ export function ConnectionForm({
             disabled={submitting}
             type="submit"
           >
-            {submitting ? "Connecting…" : "Connect"}
+            {submitting
+              ? moving
+                ? removeOld
+                  ? "Moving notes…"
+                  : "Copying notes…"
+                : type === "local"
+                  ? "Opening…"
+                  : "Connecting…"
+              : type === "local"
+                ? "Use this folder"
+                : "Connect"}
           </button>
           {onCancel && <BackHandler onBack={onCancel} />}
           {onCancel && (
@@ -97,7 +226,7 @@ export function ConnectionForm({
                 onClick={onDisconnect}
                 type="button"
               >
-                Disconnect
+                {connection.type === "local" ? "Forget folder" : "Disconnect"}
               </button>
               <button
                 className="rounded-md px-3 py-1.5 text-sm text-ink-muted hover:bg-ink/10"

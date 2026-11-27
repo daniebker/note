@@ -6,7 +6,10 @@ export function createSettingsStorage(native: NotePlugin): SettingsStorage {
     async load() {
       try {
         const { value } = await native.loadSettings();
-        return value ? JSON.parse(value) : null;
+        if (!value) return null;
+        const saved = JSON.parse(value);
+        // Settings from before local folders were supported have no type.
+        return { type: "webdav", ...saved };
       } catch (error) {
         // E.g. the Keystore key was lost: ask for the details again.
         console.error("Couldn't read the saved settings", error);

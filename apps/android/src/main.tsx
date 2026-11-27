@@ -9,6 +9,8 @@ import { applySavedTheme } from "@repo/notes/theme";
 import { App } from "@repo/notes/ui/app";
 import { Native } from "./native";
 import { createNativeFetch } from "./native-fetch";
+import { toBase64 } from "./base64";
+import { createLocalFolder } from "./local-folder";
 import { createSettingsStorage } from "./settings";
 
 getPatcher().patch(
@@ -16,8 +18,28 @@ getPatcher().patch(
   createNativeFetch((request) => Native.request(request)),
 );
 
+const service = createNoteService(createSettingsStorage(Native), {
+  // Notes always go in the app's own storage.
+  open: () => createLocalFolder(Native),
+  defaultPath: async () => (await Native.localPath()).path,
+  canChooseFolder: false,
+  openMirror: (key) => createLocalFolder(Native, key),
+});
+
 window.noteApi = {
-  ...createNoteService(createSettingsStorage(Native)),
+  ...service,
+  // The WebView can't download files, so another app is asked to show them.
+  async openAttachment(name) {
+    const file = await service.readAttachment(name);
+    if (!file.ok) return file;
+    try {
+      await Native.openFile({ name, data: toBase64(file.value) });
+      return { ok: true, value: null };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { ok: false, error: message };
+    }
+  },
   // Android may kill a backgrounded app without warning, so drafts are saved
   // as soon as it leaves the foreground.
   onBeforeClose(handler) {

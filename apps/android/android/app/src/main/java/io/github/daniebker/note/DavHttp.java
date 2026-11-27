@@ -25,9 +25,9 @@ final class DavHttp {
 
         final int status;
         final Map<String, String> headers;
-        final String body;
+        final byte[] body;
 
-        Result(int status, Map<String, String> headers, String body) {
+        Result(int status, Map<String, String> headers, byte[] body) {
             this.status = status;
             this.headers = headers;
             this.body = body;
@@ -35,12 +35,16 @@ final class DavHttp {
     }
 
     private final OkHttpClient client = new OkHttpClient.Builder()
-        .callTimeout(60, TimeUnit.SECONDS)
+        // Long enough for a large attachment on a slow connection, while a
+        // stalled one is given up on sooner.
+        .callTimeout(10, TimeUnit.MINUTES)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
         // Never follow a redirect from https to http.
         .followSslRedirects(false)
         .build();
 
-    Call newCall(String url, String method, Map<String, String> headers, String body) {
+    Call newCall(String url, String method, Map<String, String> headers, byte[] body) {
         Request.Builder request = new Request.Builder().url(url);
         String contentType = null;
         for (Map.Entry<String, String> header : headers.entrySet()) {
@@ -51,7 +55,7 @@ final class DavHttp {
         }
         RequestBody requestBody = null;
         if (body != null || HttpMethod.requiresRequestBody(method)) {
-            byte[] bytes = (body == null ? "" : body).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            byte[] bytes = body == null ? new byte[0] : body;
             MediaType type = contentType == null ? null : MediaType.parse(contentType);
             requestBody = RequestBody.create(bytes, type);
         }
@@ -66,7 +70,7 @@ final class DavHttp {
                 headers.put(header.getKey().toLowerCase(Locale.ROOT), String.join(", ", header.getValue()));
             }
             ResponseBody body = closing.body();
-            return new Result(closing.code(), headers, body == null ? "" : body.string());
+            return new Result(closing.code(), headers, body == null ? new byte[0] : body.bytes());
         }
     }
 }

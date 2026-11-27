@@ -3,12 +3,27 @@ import type { NoteApi } from "@repo/notes/api";
 
 const api: NoteApi = {
   getConnection: () => ipcRenderer.invoke("connection:get"),
-  connect: (connection) => ipcRenderer.invoke("connection:set", connection),
+  connect: (connection, options) =>
+    ipcRenderer.invoke("connection:set", connection, options),
   disconnect: () => ipcRenderer.invoke("connection:clear"),
+  chooseFolder: (current) =>
+    ipcRenderer.invoke("connection:choose-folder", current),
   listNotes: () => ipcRenderer.invoke("notes:list"),
   createNote: (data) => ipcRenderer.invoke("notes:create", data),
   updateNote: (id, changes) => ipcRenderer.invoke("notes:update", id, changes),
   deleteNote: (id) => ipcRenderer.invoke("notes:delete", id),
+  addAttachment: (id, file) => ipcRenderer.invoke("attachments:add", id, file),
+  removeAttachment: (id, name) =>
+    ipcRenderer.invoke("attachments:remove", id, name),
+  readAttachment: (name) => ipcRenderer.invoke("attachments:read", name),
+  getSyncStatus: () => ipcRenderer.invoke("sync:get"),
+  sync: () => ipcRenderer.invoke("sync:run"),
+  onSyncStatus(handler) {
+    const listener = (_event: unknown, status: Parameters<typeof handler>[0]) =>
+      handler(status);
+    ipcRenderer.on("sync:status", listener);
+    return () => ipcRenderer.removeListener("sync:status", listener);
+  },
   onBeforeClose(handler) {
     const listener = async () => {
       const saved = await handler().catch(() => false);
