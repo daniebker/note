@@ -25,8 +25,10 @@ On first start, choose where to keep your notes:
   saved and you're asked for it on each start.
 
 You can switch at any time from Settings, between the two or to another folder
-or server. Your notes are copied to the new location, and the old copies are
-left where they were. A note that is already there is skipped if it's the
+or server. Your notes are copied to the new location. Tick "Remove them from
+the old location" to move them instead: they're deleted there only once every
+note has been copied, and never if the two locations turn out to be the same
+folder. A note that is already there is skipped if it's the
 same, and kept alongside as `<name> (2).md` if it differs, so nothing is
 overwritten. If the old location can't be read (say, the server is down),
 the switch is cancelled; disconnect first to switch without your notes.

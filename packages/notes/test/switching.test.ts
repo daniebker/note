@@ -85,7 +85,7 @@ test("copies notes, skipping identical ones and keeping both of a clash", async 
     createLocalFolder(from),
     createLocalFolder(to),
   );
-  assert.deepEqual(summary, { copied: 2, renamed: 1 });
+  assert.deepEqual(summary, { copied: 2, renamed: 1, removed: 0 });
   assert.deepEqual((await readdir(to)).sort(), [
     "a.md",
     "b (2).md",
@@ -101,7 +101,7 @@ test("copies notes, skipping identical ones and keeping both of a clash", async 
   // Copying again changes nothing.
   assert.deepEqual(
     await copyNotes(createLocalFolder(from), createLocalFolder(to)),
-    { copied: 0, renamed: 0 },
+    { copied: 0, renamed: 0, removed: 0 },
   );
 });
 
@@ -151,13 +151,14 @@ test("switching between local and WebDAV takes the notes along", async () => {
   assert.deepEqual(ok(await service.connect(webdav)).copy, {
     copied: 1,
     renamed: 0,
+    removed: 0,
   });
   assert.deepEqual(ok(await service.listNotes()), [note]);
 
   // Back again: the local copy is already there and identical.
   ok(await service.updateNote(note.id, { pinned: true }));
   const back = ok(await service.connect(local));
-  assert.deepEqual(back.copy, { copied: 1, renamed: 1 });
+  assert.deepEqual(back.copy, { copied: 1, renamed: 1, removed: 0 });
   const notes = ok(await service.listNotes());
   assert.equal(notes.length, 2);
   assert.equal(notes.filter((n) => n.pinned).length, 1);
@@ -209,4 +210,72 @@ test("copies from WebDAV to a local folder", async () => {
   const summary = await copyNotes(dav, createLocalFolder(to));
   assert.equal(summary.copied, (await readdir(to)).length);
   assert.ok(summary.copied > 0);
+});
+
+test("moving deletes the notes from the old location", async () => {
+  const from = await folderWith("move-from", {
+    "a.md": "same",
+    "b.md": "new b",
+    "c.md": "only here",
+    "keep.txt": "not a note",
+  });
+  const to = await folderWith("move-to", { "a.md": "same", "b.md": "old b" });
+
+  const summary = await copyNotes(
+    createLocalFolder(from),
+    createLocalFolder(to),
+    {
+      move: true,
+    },
+  );
+  assert.deepEqual(summary, { copied: 2, renamed: 1, removed: 3 });
+  assert.deepEqual(await readdir(from), ["keep.txt"]);
+  assert.deepEqual((await readdir(to)).sort(), [
+    "a.md",
+    "b (2).md",
+    "b.md",
+    "c.md",
+  ]);
+});
+
+test("won't move a folder onto itself", async () => {
+  const dir = await folderWith("same", { "a.md": "only copy" });
+  await assert.rejects(
+    copyNotes(createLocalFolder(dir), createLocalFolder(`${dir}/`), {
+      move: true,
+    }),
+    /same folder/,
+  );
+  // Served over WebDAV, it's still the same folder.
+  const davDir = await folderWith("dav/shared", { "a.md": "only copy" });
+  const dav = createWebdavFolder({
+    url: `http://${ADDRESS}/shared`,
+    username: "",
+    password: "",
+  });
+  await assert.rejects(
+    copyNotes(createLocalFolder(davDir), dav, { move: true }),
+    /same folder/,
+  );
+  assert.deepEqual(await readdir(dir), ["a.md"]);
+  assert.deepEqual(await readdir(davDir), ["a.md"]);
+});
+
+test("the service moves notes when asked", async () => {
+  const service = serviceWith();
+  const first = path.join(root, "svc-first");
+  ok(await service.connect({ type: "local", path: first }));
+  const note = ok(await service.createNote({ title: "Moving" }));
+  const result = ok(
+    await service.connect(
+      { type: "local", path: path.join(root, "svc-second") },
+      { removeOld: true },
+    ),
+  );
+  assert.deepEqual(result.copy, { copied: 1, renamed: 0, removed: 1 });
+  assert.deepEqual(await readdir(first), []);
+  assert.deepEqual(
+    ok(await service.listNotes()).map((n) => n.id),
+    [note.id],
+  );
 });

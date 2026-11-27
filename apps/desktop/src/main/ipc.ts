@@ -27,8 +27,8 @@ export function registerIpc() {
 
   // The service validates its input, as it comes from the renderer.
   ipcMain.handle("connection:get", () => service.getConnection());
-  ipcMain.handle("connection:set", (_event, connection) =>
-    service.connect(connection),
+  ipcMain.handle("connection:set", (_event, connection, options) =>
+    service.connect(connection, options),
   );
   ipcMain.handle("connection:clear", () => service.disconnect());
   ipcMain.handle("connection:choose-folder", async (event, current) => {

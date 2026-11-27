@@ -59,10 +59,13 @@ function describeCopy(copy: NoteCopy | null) {
     return "Notes in the old location weren't copied, as it wasn't connected.";
   }
   const notes = (n: number) => (n === 1 ? "1 note" : `${n} notes`);
-  if (copy.copied === 0) return "All your notes were already here.";
   const renamed =
     copy.renamed > 0
       ? ` ${notes(copy.renamed)} differed from a note already here, so both were kept.`
       : "";
+  if (copy.removed > 0) {
+    return `Moved ${notes(copy.removed)} from the old location.${renamed}`;
+  }
+  if (copy.copied === 0) return "All your notes were already here.";
   return `Copied ${notes(copy.copied)} from the old location.${renamed}`;
 }

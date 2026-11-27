@@ -34,6 +34,7 @@ export function ConnectionForm({
   const [folder, setFolder] = useState(connection.path);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [removeOld, setRemoveOld] = useState(false);
   const chooseFolder = window.noteApi.chooseFolder;
   // Switching to another location copies the notes over.
   const moving =
@@ -51,7 +52,9 @@ export function ConnectionForm({
       type === "local"
         ? { type, path: folder }
         : { type, url, username, password };
-    const result = await window.noteApi.connect(next);
+    const result = await window.noteApi.connect(next, {
+      removeOld: moving && removeOld,
+    });
     setSubmitting(false);
     if (result.ok) onConnected(result.value);
     else setError(result.error);
@@ -172,10 +175,26 @@ export function ConnectionForm({
             </>
           )}
           {moving && (
-            <p className="text-xs text-ink-muted">
-              Your notes will be copied here. The copies in the old location are
-              kept.
-            </p>
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs text-ink-muted">
+                Your notes will be copied here.
+              </p>
+              <label className="flex items-start gap-2 text-sm text-ink">
+                <input
+                  checked={removeOld}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent)]"
+                  onChange={(e) => setRemoveOld(e.target.checked)}
+                  type="checkbox"
+                />
+                <span>Remove them from the old location</span>
+              </label>
+              {removeOld && (
+                <p className="text-xs text-ink-muted">
+                  They&apos;re deleted there once they&apos;ve all been copied.
+                  Other devices using the old location will no longer see them.
+                </p>
+              )}
+            </div>
           )}
           {error && <p className="text-sm text-danger">{error}</p>}
 
@@ -186,7 +205,9 @@ export function ConnectionForm({
           >
             {submitting
               ? moving
-                ? "Copying notes…"
+                ? removeOld
+                  ? "Moving notes…"
+                  : "Copying notes…"
                 : type === "local"
                   ? "Opening…"
                   : "Connecting…"

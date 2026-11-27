@@ -59,6 +59,8 @@ const connectionSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+const connectOptionsSchema = z.object({ removeOld: z.boolean().optional() });
+
 const noteSchema = z.object({
   title: z.string().optional(),
   content: z.string().optional(),
@@ -87,7 +89,9 @@ function errorMessage(error: unknown) {
 
 // Identifies where notes are kept, to tell whether a new connection moves them.
 function locationOf(connection: StoredConnection): string {
-  if (connection.type === "local") return `local:${connection.path}`;
+  if (connection.type === "local") {
+    return `local:${connection.path.replace(/(.)[/\\]+$/, "$1")}`;
+  }
   try {
     const url = new URL(connection.url);
     url.pathname = url.pathname.replace(/\/+$/, "");
@@ -166,9 +170,10 @@ export function createNoteService(
         return describe(saved);
       }),
 
-    connect: (input) =>
+    connect: (input, options) =>
       attempt(async () => {
         let connection = connectionSchema.parse(input);
+        const { removeOld } = connectOptionsSchema.parse(options ?? {});
         if (connection.type === "local" && !local.canChooseFolder) {
           connection = { type: "local", path: await local.defaultPath() };
         }
@@ -179,10 +184,12 @@ export function createNoteService(
         let copy: ConnectResult["copy"];
         if (active && active.location !== next.location) {
           try {
-            copy = await copyNotes(active.folder, next.folder);
+            copy = await copyNotes(active.folder, next.folder, {
+              move: removeOld,
+            });
           } catch (error) {
             throw new Error(
-              `Couldn't copy your notes from the old location (${errorMessage(error)}). To switch without them, disconnect first.`,
+              `Couldn't ${removeOld ? "move" : "copy"} your notes from the old location (${errorMessage(error)}). To switch without them, disconnect first.`,
             );
           }
         } else if (!active && saved && locationOf(saved) !== next.location) {

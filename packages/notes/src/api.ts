@@ -34,6 +34,13 @@ export type NoteCopy = {
   copied: number;
   /** Notes saved under a new name, as a different file had theirs. */
   renamed: number;
+  /** Notes deleted from the old location, when moving. */
+  removed: number;
+};
+
+export type ConnectOptions = {
+  /** Delete the notes from the old location once they've been copied. */
+  removeOld?: boolean;
 };
 
 export type ConnectResult = SavedConnection & {
@@ -51,9 +58,13 @@ export type NoteApi = {
   getConnection(): Promise<Result<SavedConnection>>;
   /**
    * Switches to `connection`, first copying the notes from the current
-   * location if it is a different one. The old copies are left in place.
+   * location if it is a different one. The old copies are kept unless
+   * `removeOld` is set.
    */
-  connect(connection: Connection): Promise<Result<ConnectResult>>;
+  connect(
+    connection: Connection,
+    options?: ConnectOptions,
+  ): Promise<Result<ConnectResult>>;
   disconnect(): Promise<Result<null>>;
   /** Asks for a local notes folder; null if the user cancelled. */
   chooseFolder?(current: string): Promise<string | null>;
