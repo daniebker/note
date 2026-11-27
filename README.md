@@ -111,3 +111,12 @@ folder.
 - `packages/notes`: the UI and note storage both apps share
 - `apps/docs`: Next.js starter app
 - `packages/*`: shared UI, ESLint, Tailwind and TypeScript config
+
+## License
+
+Copyright (C) 2026 Daniel Baker
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version. It is distributed without any warranty. See [LICENSE](LICENSE).

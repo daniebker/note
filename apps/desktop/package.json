@@ -55,5 +55,6 @@
       "artifactName": "Note-${version}-${arch}.${ext}",
       "icon": "assets/icon.png"
     }
-  }
+  },
+  "license": "AGPL-3.0-or-later"
 }
